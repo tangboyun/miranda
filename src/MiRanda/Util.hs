@@ -18,30 +18,63 @@ import MiRanda.Types
 import qualified Data.ByteString.Char8 as B8
 import Data.Char
 
-parseSeedType :: Align -> SeedType
-parseSeedType (Align miR3' mR5' b) = 
+seedToIdx :: ByteString -> (UV.Vector Int,Int)
+seedToIdx miR3' =
   let miR = B8.reverse miR3'
       nS  = B8.length seed
       seed = flip B8.take miR $
              (1 +) $ last $ take 8 $
              B8.findIndices isAlpha miR
       sVec = UV.fromList $ B8.unpack seed
-      idx2 = UV.take 2 $ UV.findIndices isAlpha sVec
-      fstI = UV.head idx2
-      sndI = UV.last idx2
-      site = B8.take nS $
+  in (UV.findIndices isAlpha sVec,nS)
+
+getSeedType :: Align -> SeedType
+getSeedType (Align miR3' mR5' b) = 
+  let (idxV,nS) = seedToIdx miR3'
+      idxV' = UV.fromList [0..7]
+      site = UV.fromList $
+             B8.unpack $ B8.take nS $
              B8.reverse mR5'
-      bond = B8.take nS $
+      at = UV.unsafeIndex
+      bond = UV.fromList $
+             B8.unpack $ B8.take nS $
              B8.reverse b
-  in if B8.head bond == ' ' &&
-        B8.last bond == ' '
-     then M6
-     else if B8.index bond fstI == ' ' &&
-             B8.index bond sndI == ' '
-          then M6O
-          else if B8.head bond /= ' ' &&
-                  B8.last bond /= ' '
-               then go8 sVec site bond
-               else go7or8 sVec site bond
-  where 
-    
+      noGap = idxV == idxV'
+      allMatch2_8 = UV.all (== '|') $
+                    UV.unsafeBackpermute bond $
+                    UV.tail idxV -- if 2~8 mer all match
+      allMatch2_7 = UV.all (== '|') $
+                    UV.unsafeBackpermute bond $
+                    UV.init $ UV.tail $ idxV
+      allMatch3_8 = UV.all (== '|') $
+                    UV.unsafeBackpermute bond $
+                    UV.tail $ UV.tail $ idxV
+  in if noGap && allMatch2_8
+     then if site `at` UV.head idxV == 'A' -- if site 1 == A
+          then M8 -- 8mer
+          else M7M8 -- 7mer-m8
+     else if noGap && allMatch2_7 -- if 2~7 mer all match
+          then if site `at` UV.head idxV == 'A' -- if site 1 == A
+               then M7A1 -- 7mer-A1
+               else M6 -- 6mer
+          else if noGap && allMatch3_8
+               then M6O
+               else Imperfect
+
+getPairScore :: SeedType -> Align -> PairScore
+getPairScore s (Align miR3' mR5' b) = scanScore len (0,(0,0))
+  where
+  (idxV,_) = seedToIdx miR3'
+  at = UV.unsafeIndex
+  idx7 = idxV `at` 6
+  idx8 = idxV `at` 7
+  len = case s of
+          M6 -> idx7
+          M7A1 -> idx7
+          _    -> idx8
+  idx13 = idxV `at` 12
+  idx16 = idxV `at` 15
+  bond = UV.drop len $
+         UV.fromList $
+         B8.unpack $ B8.reverse b
+  

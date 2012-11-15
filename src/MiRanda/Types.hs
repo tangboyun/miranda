@@ -24,7 +24,8 @@ data Record = Record
   } deriving (Show)
 
 data Setting = Setting
-  { gapOpenPenalty :: {-# UNPACK #-} !Double
+
+               { gapOpenPenalty :: {-# UNPACK #-} !Double
   , gapExtendPenalty :: {-# UNPACK #-} !Double
   , scoreThreshold :: {-# UNPACK #-} !Double
   , energyThreshold :: {-# UNPACK #-} !Double
@@ -74,25 +75,17 @@ data SeedType = M8   -- ^ 8mer site
               | M7A1 -- ^ 7mer-A1 site
               | M6   -- ^ 6mer site                
               | M6O  -- ^ Offset 6mer site
-              | M8GU -- ^ 8mer GU wobble
-              | M7GU -- ^ 7mer GU wobble
-              | M8BM -- ^ 8mer with bulge in site
-              | M7BI -- ^ 7mer with bulge in miRNA
-              | M8Mis -- ^ 8mer with mismatch
-              | M7Mis -- ^ 7mer with mismatch
+              | Imperfect -- ^ imperfect seed site
               deriving (Eq,Ord)
+
+newtype PairScore = PS Double
 
 instance Show SeedType where
   show s =
     case s of
-      M8    -> "8mer site"
-      M7M8  -> "7mer-m8 site"
-      M7A1  -> "7mer-A1 site"
-      M6    -> "6mer site"
-      M6O   -> "Offset 6mer site"
-      M8GU  -> "8mer GU wobble"
-      M7GU  -> "7mer GU wobble"
-      M8BM  -> "8mer with bulge in site"
-      M7BI  -> "7mer with bulge in miRNA"
-      M8Mis -> "8mer with mismatch"
-      M7Mis -> "7mer with mismatch"
+      M8        -> "8mer site"
+      M7M8      -> "7mer-m8 site"
+      M7A1      -> "7mer-A1 site"
+      M6        -> "6mer site"
+      M6O       -> "Offset 6mer site"
+      Imperfect -> "Imperfect site"
