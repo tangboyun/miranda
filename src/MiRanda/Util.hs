@@ -31,6 +31,17 @@ seedToIdx miR3' =
       sVec = UV.fromList $ B8.unpack seed
   in (UV.findIndices isAlpha sVec,nS)
 
+lengthOfEach (Align miR3' _ _) =
+  let miR = B8.reverse miR3'
+      at = UV.unsafeIndex
+      idxV = UV.fromList $
+             B8.findIndices isAlpha miR
+      is = map (idxV `at`) [0,1,7,12,16]
+      go [] = []
+      go [x] = B8.drop x miR
+      go (i:j:xs) = B8.take (j-i) $ B8.drop i miR
+  in reverse $ map B8.length $ go is
+     
 getSeedType :: Align -> SeedType
 getSeedType (Align miR3' mR5' b) = 
   let (idxV,nS) = seedToIdx miR3'
@@ -129,6 +140,7 @@ getSeedMatchSite site =
                 _    -> P 1 7
   in P (down - idxV `at` j) (down - idxV `at` i)
 
+  
 getAUScore :: ByteString -> Site -> AUScore
 getAUScore utr site =
   let P up dn = getSeedMatchSite site
