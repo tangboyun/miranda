@@ -39,7 +39,8 @@ getSeedType (Align miR3' mR5' b) =
       bond = UV.fromList $
              B8.unpack $ B8.take nS $
              B8.reverse b
-      noGap = idxV == idxV'
+      noGap = (UV.all isAlpha $ UV.take 8 site) &&
+              (idxV == idxV')
       allMatch2_8 = UV.all (== '|') $
                     UV.unsafeBackpermute bond $
                     UV.tail idxV -- if 2~8 mer all match
