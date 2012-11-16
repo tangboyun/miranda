@@ -24,13 +24,12 @@ data Record = Record
   } deriving (Show)
 
 data Setting = Setting
-
-               { gapOpenPenalty :: {-# UNPACK #-} !Double
+  { gapOpenPenalty :: {-# UNPACK #-} !Double
   , gapExtendPenalty :: {-# UNPACK #-} !Double
   , scoreThreshold :: {-# UNPACK #-} !Double
   , energyThreshold :: {-# UNPACK #-} !Double
   , scalingParameter :: {-# UNPACK #-} !Double
-  } deriving (Eq)
+  } deriving (Show,Eq)
 
 data Stat = Stat
   { totalScore :: {-# UNPACK #-} !Double
@@ -57,7 +56,7 @@ data Site = Site
   , identity :: Identity
   , seedType :: SeedType
   , align :: Align
-  }
+  } deriving (Show,Eq)
 
 data Identity = Id
   { idPerfectMatch :: {-# UNPACK #-} !Double
@@ -79,13 +78,16 @@ data SeedType = M8   -- ^ 8mer site
               deriving (Eq,Ord)
 
 newtype PairScore = PS Double
-
+                    deriving (Show,Eq)
+newtype AUScore = AU Double
+                  deriving (Show,Eq)
+                           
 instance Show SeedType where
   show s =
     case s of
-      M8        -> "8mer site"
-      M7M8      -> "7mer-m8 site"
-      M7A1      -> "7mer-A1 site"
-      M6        -> "6mer site"
-      M6O       -> "Offset 6mer site"
-      Imperfect -> "Imperfect site"
+      M8        -> "8mer"
+      M7M8      -> "7mer-m8"
+      M7A1      -> "7mer-A1"
+      M6        -> "6mer"
+      M6O       -> "Offset 6mer"
+      Imperfect -> "Imperfect"

@@ -17,6 +17,9 @@ module MiRanda.Util where
 import MiRanda.Types
 import qualified Data.ByteString.Char8 as B8
 import Data.Char
+import qualified Data.Vector.Unboxed as UV
+import Data.ByteString (ByteString)
+import Data.List
 
 seedToIdx :: ByteString -> (UV.Vector Int,Int)
 seedToIdx miR3' =
@@ -63,19 +66,104 @@ getSeedType (Align miR3' mR5' b) =
                else Imperfect
 
 getPairScore :: SeedType -> Align -> PairScore
-getPairScore s (Align miR3' mR5' b) = scanScore len (0,(0,0))
+getPairScore s (Align miR3' mR5' b) =
+  PS $
+  scanScore len 0
+  (0,(getIdx len miRNA,
+      getIdx len utr))
   where
-  (idxV,_) = seedToIdx miR3'
-  at = UV.unsafeIndex
-  idx7 = idxV `at` 6
-  idx8 = idxV `at` 7
-  len = case s of
-          M6 -> idx7
-          M7A1 -> idx7
-          _    -> idx8
-  idx13 = idxV `at` 12
-  idx16 = idxV `at` 15
-  bond = UV.drop len $
-         UV.fromList $
-         B8.unpack $ B8.reverse b
-  
+    getIdx l poly = (length $
+                     B8.findIndices isAlpha $
+                     B8.take l poly) - 1
+    idxV = UV.fromList $
+           B8.findIndices isAlpha $
+           B8.reverse miR3'
+    n = B8.length b
+    at = UV.unsafeIndex
+    idx7 = idxV `at` 6
+    idx8 = idxV `at` 7
+    len = case s of
+            M6 -> idx7
+            M7A1 -> idx7
+            _    -> idx8
+    miRNA = B8.reverse miR3'
+    utr   = B8.reverse mR5'
+    idxFor13 = idxV `at` 12
+    idxFor16 = idxV `at` 15
+    bond = B8.reverse b
+    baseScore c = if c == '|'
+                  then 0.5
+                  else if c == ':'
+                       then 0.25
+                       else 0
+    scanScore idx score preScore@(maxScore,(miIdx,utrIdx))
+      | idx < n   =
+        if B8.index bond idx /= ' '
+        then if idxFor13 <= idx && idx <= idxFor16
+             then let score' = score + 2*baseScore (B8.index bond idx)
+                  in scanScore (idx+1) score' preScore
+             else let score' = score + baseScore (B8.index bond idx)
+                  in scanScore (idx+1) score' preScore
+        else if score >= maxScore
+             then let miIdx' = getIdx (idx-1) miRNA
+                      utrIdx' = getIdx (idx-1) utr
+                  in scanScore (idx+1) 0 (score,(miIdx',utrIdx'))
+             else scanScore (idx+1) 0 preScore
+      | otherwise = let offset = abs $ miIdx - utrIdx
+                    in maxScore - max 0 (0.5 * fromIntegral (offset - 2))
+
+getSeedMatchSite :: Site -> Pair
+getSeedMatchSite site =
+  let P _ down = mRNARange site
+      (Align miR3' mR5' b) = align site
+      seed = seedType site
+      (idxV,n) = seedToIdx miR3'
+      at = UV.unsafeIndex
+      fstC = UV.head idxV
+      P i j = case seed of
+                M8 -> P 0 7
+                M7A1 -> P 0 7
+                M7M8 -> P 1 7
+                M6   -> P 1 7
+                M6O  -> P 2 7
+                _    -> P 1 7
+  in P (down - idxV `at` j) (down - idxV `at` i)
+
+getAUScore :: ByteString -> Site -> AUScore
+getAUScore utr site =
+  let P up dn = getSeedMatchSite site
+      (us,ds) = let ls = map (1/) [2.0..]
+                    ls1 = 1:ls
+                    ls2 = 0.5:ls
+                in case seedType site of
+                  M8 -> (ls1,ls)
+                  M7M8 -> (ls1,ls2)
+                  M7A1 -> (ls,ls)
+                  _   -> (ls,ls2)
+                  
+      up30 = B8.unpack $ B8.take 30 $
+             B8.map ((\c ->
+                       if c == 'U'
+                       then 'T'
+                       else c) . toUpper) $
+             B8.reverse $ B8.take up utr
+      dn30 = B8.unpack $ B8.take 30 $
+             B8.map ((\c ->
+                       if c == 'U'
+                       then 'T'
+                       else c) . toUpper) $
+             B8.drop (dn+1) utr
+      total = foldl1' (+) $
+              zipWith (\_ b -> b) up30 us ++
+              zipWith (\_ b -> b) dn30 ds
+      local = foldl1' (+) $
+              zipWith (\c s ->
+                        if c == 'A' || c == 'U'
+                        then s
+                        else 0) up30 us ++
+              zipWith (\c s ->
+                        if c == 'A' || c == 'U'
+                        then s
+                        else 0) dn30 ds
+  in AU $ local / total
+   
