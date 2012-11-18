@@ -35,21 +35,35 @@ siteColor = dodgerblue
 seedPairColor = darkorange
 sitePairColor = limegreen
 
+seedMatchStr l s =
+  case s of
+    M8 -> siteStr "8mer" ===
+          underLine
+    M7M8 -> siteStr "7mer-m8" ===
+            underLine
+    M7A1 -> siteStr "7mer-A1" ===
+            underLine
+    M6 -> siteStr "6mer" ===
+          underLine
+    M6O -> siteStr "Offset" ===
+           siteStr "6mer" ===
+           underLine
+    _   -> siteStr "Imperfect" ===
+           siteStr "match" ===
+           underLine
+  where
+    siteStr str = stringC siteColor str # centerXY
+    underLine = hrule (l * w) # lw 0.05 # lc siteColor
 
+seedStr l = (hrule (l * w) # lw 0.05 # lc seedColor) ===
+            (stringC seedColor "Seed" # centerXY)
+
+pairStr l = (stringC sitePairColor "3'" # centerXY) ===
+            (stringC sitePairColor "pairing" # centerXY) ===
+            (hrule (l * w) # lw 0.05 # lc sitePairColor)
 
 renderBinding s ali@(Align miR3' utr5' b) =
-  let seedStr l = (stringC seedColor "Seed" # centerXY) ===
-                  (hrule (l * w) # lw 0.05 # lc seedColor)
-      seedMatchStr l = (hrule (l * w) # lw 0.05 # lc siteColor) ===
-                       (stringC siteColor "Seed" # centerXY) ===
-                       (stringC siteColor "match" # centerXY)
-      seedMisMatStr l = (hrule (l * w) # lw 0.05) ===
-                       (string "Imperfect" # centerXY) ===
-                       (string "match" # centerXY)
-      pairStr l = (hrule (l * w) # lw 0.05 # lc sitePairColor) ===
-                  (stringC sitePairColor "3'" # centerXY) ===
-                  (stringC sitePairColor "pairing" # centerXY)
-      (lhs:pair:loop:seed:rhs:[]) = splitPlaces (lengthOfEach ali) $
+  let (lhs:pair:loop:seed:rhs:[]) = splitPlaces (lengthOfEach ali) $
                                     B8.unpack miR3'
       lastPart = hcat [string lhs
                       ,stringC sitePairColor pair
