@@ -38,8 +38,8 @@ lengthOfEach (Align miR3' _ _) =
              B8.findIndices isAlpha miR
       is = map (idxV `at`) [0,1,7,12,16]
       go [] = []
-      go [x] = B8.drop x miR
-      go (i:j:xs) = B8.take (j-i) $ B8.drop i miR
+      go [x] = [B8.drop x miR]
+      go (i:j:xs) = (B8.take (j-i) $ B8.drop i miR) : go (j:xs)
   in reverse $ map B8.length $ go is
      
 getSeedType :: Align -> SeedType
