@@ -12,7 +12,7 @@
 --
 -----------------------------------------------------------------------------
 
-module MiRanda.Diagram.Internal
+module MiRanda.Diagram.Structure
        where
 
 import Diagrams.Prelude
@@ -24,7 +24,6 @@ import Data.List.Split
 import Data.Char
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.Vector.Unboxed as UV
-import Diagrams.Backend.Cairo.CmdLine
 import Text.Printf
 import Data.Function
 
@@ -157,52 +156,3 @@ renderBinding s p ali =
   renderMiRNA ali # centerX
 
 
-cChar c = (alignedText 0.44 0.44 "C" # fc c <>
-           rect 1.12 0.64 # lcA transparent) # centerXY
-
-tChar c = (alignedText 0.45 0.44 "T" # fc c <>
-           rect 1.12 0.64 # lcA transparent) # centerXY
-
-gChar c = (alignedText 0.45 0.44 "G" # fc c <>
-           rect 1.12 0.64  # lcA transparent) # centerXY
-
-aChar c = (alignedText 0.49 0.44 "A" # fc c <>
-           rect 1.12 0.64 # lcA transparent) # centerXY
-          
-data Sta where
-  A ::
-  { per :: Double} -> Sta
-  T :: 
-  { per :: Double} -> Sta
-  G :: 
-  { per :: Double} -> Sta
-  C :: 
-  { per :: Double} -> Sta
-              
-
-plotSeqStas = hcat .
-              map (plot . sortBy (flip compare `on` per))
-  where
-    aColor = red
-    gColor = green
-    cColor = orange
-    tColor = blue
-    plot = alignB . vcat .
-           map (\s ->
-                 case s of
-                   A p ->
-                     if p == 0
-                     then mempty
-                     else aChar aColor # scaleY (p/0.25)
-                   T p ->
-                     if p == 0
-                     then mempty
-                     else tChar tColor # scaleY (p/0.25)
-                   C p ->
-                     if p == 0
-                     then mempty
-                     else cChar cColor # scaleY (p/0.25)
-                   G p ->
-                     if p == 0
-                     then mempty
-                     else gChar gColor # scaleY (p/0.25))

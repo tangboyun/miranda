@@ -1,3 +1,4 @@
+{-# LANGUAGE GADTs #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : 
@@ -14,7 +15,19 @@
 module MiRanda.Types where
 
 import Data.ByteString (ByteString)
+import Data.Vector.Unboxed
 
+data UTR = UTR
+  {geneSymbol :: ByteString
+  ,taxonomyID :: Int
+  ,alignment :: GapSeq
+  } deriving (Show,Eq)
+
+newtype GapSeq = GS ByteString
+               deriving (Show,Eq)
+newtype SeqData = SD ByteString
+                deriving (Show,Eq)
+                         
 data Record = Record
   { para :: Setting
   , miRNA :: ByteString
@@ -22,6 +35,12 @@ data Record = Record
   , sites :: [Site]
   , statistics :: Stat
   } deriving (Show)
+
+data Latin = Latin
+  { genus :: ByteString
+  , species :: ByteString
+  , commonName :: ByteString
+  } deriving (Eq)
 
 data Setting = Setting
   { gapOpenPenalty :: {-# UNPACK #-} !Double
@@ -43,8 +62,8 @@ data Stat = Stat
   } deriving (Show,Eq)
              
 data Pair = P
-  { beg :: {-# UNPACK #-} !Int
-  , end :: {-# UNPACK #-} !Int
+  { beg :: {-# UNPACK #-} !Int -- begin at 0
+  , end :: {-# UNPACK #-} !Int -- include end
   } deriving (Show,Eq)
             
 data Site = Site
@@ -68,7 +87,15 @@ data Align = Align
   , mRNASite5' :: ByteString
   , hydrogenBond :: ByteString
   } deriving (Show,Eq)
-             
+
+data Sta where
+  A :: { per :: Double} -> Sta
+  T :: { per :: Double} -> Sta
+  G :: { per :: Double} -> Sta
+  C :: { per :: Double} -> Sta
+  U :: { per :: Double} -> Sta
+  deriving (Show,Eq)
+
 data SeedType = M8   -- ^ 8mer site
               | M7M8 -- ^ 7mer-m8 site
               | M7A1 -- ^ 7mer-A1 site
@@ -81,7 +108,16 @@ newtype PairScore = PS Double
                     deriving (Show,Eq)
 newtype AUScore = AU Double
                   deriving (Show,Eq)
-                           
+
+data Ch = ChA
+        | ChT
+        | ChU
+        | ChG
+        | ChC
+        | Gap
+        deriving (Eq)
+
+
 instance Show SeedType where
   show s =
     case s of
