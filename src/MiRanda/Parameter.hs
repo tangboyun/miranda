@@ -26,8 +26,8 @@ taxMap =
   ,(9031, Latin "Gallus" "gallus" "Chicken")
   ,(9258, Latin "Ornithorhynchus" "anatinus" "Platypus")
   ,(9361, Latin "Dasypus" "novemcinctus" "Armadillo") -- Nine-banded armadillo
-  ,(9365, Latin "Erinaceus" "europaeus" "Western European hedgehog")
-  ,(9371, Latin "Echinops" "telfairi" "Small Madagascar hedgehog")
+  ,(9365, Latin "Erinaceus" "europaeus" "Hedgehog") -- Western European hedgehog
+  ,(9371, Latin "Echinops" "telfairi" "Tenrec") -- Small Madagascar hedgehog, The lesser hedgehog tenrec
   ,(9544, Latin "Macaca" "mulatta" "Rhesus") -- Rhesus monkey
   ,(9598, Latin "Pan" "troglodytes" "Chimpanzee")
   ,(9606, Latin "Homo" "sapiens" "Human")
