@@ -151,6 +151,7 @@ plotMultiAlign seedRange siteRange utr utrs =
                 then 0 :: Int
                 else 1) $
           B8.unpack $ seqStr
+      strLen = UV.maximum s
       seedBeg = fromJust $ UV.find (== (1+beg seedRange)) s
       seedEnd' = fromJust $ UV.find (== (1+end seedRange)) s
       seedEnd = seedEnd' + 1
@@ -161,9 +162,11 @@ plotMultiAlign seedRange siteRange utr utrs =
       (exBeg,exEnd) = if siteLen < 60
                       then let b = ceiling $ (60 - fromIntegral siteLen) / 2
                                e = floor $ (60 - fromIntegral siteLen) / 2
-                           in if siteBeg - b >= 0
-                              then (siteBeg - b, siteEnd + e)
-                              else (0,60)
+                           in if siteBeg - b < 0
+                              then (0,60)
+                              else if siteEnd + e > strLen
+                                then (strLen - 60, strLen)
+                                else (siteBeg - b, siteEnd + e)
                       else (siteBeg, siteEnd)
       seedRB = seedBeg - exBeg
       seedRE = seedEnd - exBeg
@@ -257,5 +260,3 @@ toRange (i,j) str =
       n = B8.length $ B8.filter isAlpha $
           B8.take (j-i) $ B8.drop i str
   in (i',i' + n)
-   
- 
