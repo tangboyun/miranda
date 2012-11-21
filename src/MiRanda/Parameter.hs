@@ -43,6 +43,6 @@ taxMap =
   ,(13616, Latin "Monodelphis" "domestica" "Gray short-tailed opossum")
   ,(28377, Latin "Anolis" "carolinensis" "Green anole")
   ,(30611, Latin "Otolemur" "garnettii" "Small-eared galago")
-  ,(37347, Latin "Tupaia" "belangeri" "Northern tree shrew")
+  ,(37347, Latin "Tupaia" "belangeri" "Northern tree shrew") -- 树鼩 (乙肝模式动物)
   ,(42254, Latin "Sorex" "araneus" "European shrew")]
   

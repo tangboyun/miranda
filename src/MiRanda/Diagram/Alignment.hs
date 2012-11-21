@@ -14,10 +14,11 @@
 module MiRanda.Diagram.Alignment
        where
 
-import Diagrams.Prelude hiding (diff,beg,end)
+import Diagrams.Prelude hiding (diff,beg,end,trace)
 import Data.Colour.Names
 import MiRanda.Types
 import Data.Colour
+import Data.Colour.SRGB (RGB(..),sRGB,toSRGB)
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
 import MiRanda.Parameter
@@ -29,6 +30,7 @@ import qualified Data.ByteString.Char8 as B8
 import Data.ByteString (ByteString)
 import Data.Maybe
 import Data.Char
+import Debug.Trace
 
 aColor = red
 gColor = green
@@ -67,44 +69,40 @@ string = hcat . map char
 
 stringC c = hcat . map (charC c)
 
-charCP (ch,p) = text [ch] <>
-                rect w h # lcA transparent
-                         # chooseColor
-  where
-    chooseColor = case ch of
-                    'A' -> fcA (aColor `withOpacity` p) 
-                    'C' -> fcA (cColor `withOpacity` p) 
-                    'G' -> fcA (gColor `withOpacity` p) 
-                    'T' -> fcA (tColor `withOpacity` p) 
-                    'U' -> fcA (uColor `withOpacity` p) 
-                    '-' -> id
-                    _ -> error "Invalid char in chooseColor"
 
-plotSeqStas = V.map (plot . sortBy (flip compare `on` per) . V.toList)
+plotSeqStas isBW = map (plot . sortBy (flip compare `on` per) . tpToList)
   where
+    tpToList (a,c,g,t,u) = [A a, C c, G g, T t, U u]
+    toBW = if isBW
+           then luminosity
+           else id
+    luminosity = (\(RGB r g b) ->
+                   let c = 0.21 * r + 0.71 * g + 0.07 * b
+                   in sRGB c c c
+                   ) . toSRGB
     plot = alignB . vcat .
            map (\s ->
                  case s of
                    A p ->
                      if p == 0
                      then mempty
-                     else aChar aColor # scaleY (p/0.25)
+                     else aChar (toBW aColor) # scaleY (p/0.25)
                    T p ->
                      if p == 0
                      then mempty
-                     else tChar tColor # scaleY (p/0.25)
+                     else tChar (toBW tColor) # scaleY (p/0.25)
                    U p ->
                      if p == 0
                      then mempty
-                     else uChar uColor # scaleY (p/0.25)
+                     else uChar (toBW uColor) # scaleY (p/0.25)
                    C p ->
                      if p == 0
                      then mempty
-                     else cChar cColor # scaleY (p/0.25)
+                     else cChar (toBW cColor) # scaleY (p/0.25)
                    G p ->
                      if p == 0
                      then mempty
-                     else gChar gColor # scaleY (p/0.25))
+                     else gChar (toBW gColor) # scaleY (p/0.25))
 
 
 diff :: Pair -> ByteString -> ByteString -> Double
@@ -171,28 +169,35 @@ plotMultiAlign seedRange siteRange utr utrs =
       seedRE = seedEnd - exBeg
       siteRB = siteBeg - exBeg
       siteRE = siteEnd - exBeg
-      fstSs = splitPlaces
+      chss = map
+             (splitPlaces
               [siteRB
               ,seedRB - siteRB
               ,seedRE - seedRB
               ,siteRE - seedRE
-              ,exEnd - siteRE] $
-              B8.unpack $
-              extractStr (exBeg,exEnd) seqStr
+              ,exEnd - siteRE] . B8.unpack) strs
       
-      fstAlign = plotFstAlign fstSs seedStas
+      dMatrix = map (plotOneChain siteStas) chss 
       strs = map (extractStr (exBeg,exEnd) . exGS . alignment) ss
-      seeds = map (extractStr (seedRB,seedRE)) strs
-      seedStas = splitPlaces
+      sites = map (extractStr (siteRB,siteRE)) strs
+      siteStas = splitPlacesBlanks
                  [seedRB - siteRB
                  ,seedRE - seedRB
                  ,siteRE - seedRE] $
-                 map
+                 take siteLen $
+                 drop siteRB $
+                 seqStas
+      (beforeSite:siteStr:afterSite:[]) = splitPlacesBlanks
+                                       [siteRB
+                                       ,siteRE - siteRB
+                                       ,(B8.length $ head strs)-siteRE]
+                                       seqStas
+      seqStas = map
                  (\i ->
                    let vec = UV.fromList $
                              map (\s ->
                                    B8.index s i
-                                 ) seeds
+                                 ) strs
                        count f = fromIntegral $
                                  UV.length $
                                  UV.findIndices f vec
@@ -203,25 +208,36 @@ plotMultiAlign seedRange siteRange utr utrs =
                        t = count ((== 'T') . toUpper) / n
                        u = count ((== 'U') . toUpper) / n
                    in (a,c,g,t,u)
-                 ) [0..seedRE-seedRB-1]
+                 ) [0..(B8.length $ head strs)-1]
       at = (IM.!)
-  in fstAlign
+      charStas = plotSeqStas True beforeSite ++
+                 plotSeqStas False siteStr ++
+                 plotSeqStas True afterSite
+  in (dMatrix ++ [charStas])
    
   where 
-    plotFstAlign (bwBeg:b1:b2:b3:bwEnd:[]) (bp1:bp2:bp3:[]) =
-      let d1 = hcat (map (charCP . get) $ zip b1 bp1) # centerX
-          d2 = stringC seedColor "Seed" # centerX ===
-               stringC seedColor "match" # centerX ===
-               hrule ((fromIntegral $ length b2) * w) # lc seedColor
-               # centerX ===
-               hcat (map (charCP . get) $ zip b2 bp2) # centerX
-          d3 = hcat (map (charCP . get) $ zip b3 bp3) # centerX
-          d = (d1 # alignB ||| d2 # alignB ||| d3 # alignB) # alignB
-          n = fromIntegral $ length b1 + length b2 + length b3
-      in (stringC siteColor "Binding Site" # centerX ===
-          hrule (n * w) # lc siteColor # centerX ===
-          d) # alignB
+    plotOneChain (bp1:bp2:bp3:[]) (bwBeg:b1:b2:b3:bwEnd:[]) =
+      let f a b = map (charCP . get) $ zip a b
+          d1 = f b1 bp1
+          d2 = f b2 bp2
+          d3 = f b3 bp3
+      in map charA bwBeg ++ d1 ++ d2 ++ d3 ++ map charA bwEnd
       where
+        charA ch = text [ch] <>
+                   rect 0.6 1 # lcA transparent
+        charCP (ch,p) = text [ch] <>
+                rect 0.6 1 # lcA transparent
+                # chooseColor
+          where 
+            chooseColor = case ch of
+              'A' -> fcA (aColor `withOpacity` p) 
+              'C' -> fcA (cColor `withOpacity` p) 
+              'G' -> fcA (gColor `withOpacity` p) 
+              'T' -> fcA (tColor `withOpacity` p) 
+              'U' -> fcA (uColor `withOpacity` p) 
+              '-' -> id
+              _ -> error "Invalid char in chooseColor"
+
         get (ch',(a,c,g,t,u)) =
           let ch = toUpper ch'
           in case ch of
