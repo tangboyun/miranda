@@ -32,8 +32,6 @@ import           MiRanda.Parameter
 import           MiRanda.Types
 import           Text.Printf
 
-import           Debug.Trace
-
 aColor = red
 gColor = green
 cColor = orange
@@ -171,11 +169,9 @@ plotMultiAlign seedRange siteRange utr utrs =
           B8.unpack $ seqStr
       strLen = UV.maximum s
       seedBeg = fromJust $ UV.findIndex (== (1+beg seedRange)) s
-      seedEnd' = fromJust $ UV.findIndex (== (end seedRange)) s
-      seedEnd = seedEnd' + 1
+      seedEnd = fromJust $ UV.findIndex (== (1+end seedRange)) s
       siteBeg = fromJust $ UV.findIndex (== (1+beg siteRange)) s
-      siteEnd' = fromJust $ UV.findIndex (== (end siteRange)) s
-      siteEnd = siteEnd' + 1
+      siteEnd = fromJust $ UV.findIndex (== (1+end siteRange)) s
       siteLen = siteEnd - siteBeg
       (exBeg,exEnd) = if siteLen < 60
                       then let b = ceiling $ (60 - fromIntegral siteLen) / 2
@@ -190,16 +186,7 @@ plotMultiAlign seedRange siteRange utr utrs =
       seedRE = seedEnd - exBeg
       siteRB = siteBeg - exBeg
       siteRE = siteEnd - exBeg
-      toFivePart = trace ("exBeg:" ++ show exBeg ++ "\n" ++
-                          "exEnd:" ++ show exEnd ++ "\n" ++
-                          "seedBeg:" ++ show seedBeg ++ "\n" ++
-                          "seedEnd:" ++ show seedEnd ++ "\n" ++
-                          "siteBeg:" ++ show siteBeg ++ "\n" ++
-                          "siteEnd:" ++ show siteEnd ++ "\n" 
-
-                         ) $
-
-                   splitPlaces
+      toFivePart = splitPlaces
                    [siteRB
                    ,seedRB - siteRB
                    ,seedRE - seedRB
