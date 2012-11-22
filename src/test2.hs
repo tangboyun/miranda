@@ -20,9 +20,12 @@ import Diagrams.Prelude hiding (trace)
 import Diagrams.Backend.Cairo.CmdLine
 import qualified Data.ByteString.Char8 as B8
 import Data.List
-
+import qualified Data.Vector.Unboxed as UV
+import Data.Maybe
+import Data.ByteString (ByteString)
 u1 = ["A2M"
        ,"9361"
+     --  123456789 
        ,"GGACCAUAGGAAUGAAAACUGCUUU----GCUCAAGUUCCUGUUCCACAGACUCAGGAUU--CCAUACAGAAAG--G------------------------GUUUAUGUCUUUCCA-AAAAUUGAUGAAUAAACUC-CUCUU--CUGG---------UCAAUCUC"]
 
 us = [["A2M"
@@ -45,4 +48,5 @@ toUtr (gs:tax:sdata:[]) =
           
 main = defaultMain $
        let dM = plotMultiAlign (P 39 46) (P 26 46) (toUtr u1) (map toUtr us)
-       in  vcat $ map (hcat' (CatOpts Distrib 0.6 Proxy)) dM
+       in dM
+
