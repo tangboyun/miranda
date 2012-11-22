@@ -14,23 +14,25 @@
 module MiRanda.Diagram.Alignment
        where
 
-import Diagrams.Prelude hiding (diff,beg,end,trace)
-import Data.Colour.Names
-import MiRanda.Types
-import Data.Colour
-import Data.Colour.SRGB (RGB(..),sRGB,toSRGB)
+import           Data.ByteString (ByteString)
+import qualified Data.ByteString.Char8 as B8
+import           Data.Char
+import           Data.Colour
+import           Data.Colour.Names
+import           Data.Colour.SRGB (RGB(..),sRGB,toSRGB)
+import           Data.Function
+import qualified Data.IntMap.Strict as IM
+import           Data.List
+import           Data.List.Split
+import           Data.Maybe
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
-import MiRanda.Parameter
-import qualified Data.IntMap.Strict as IM
-import Data.List
-import Data.List.Split
-import Data.Function
-import qualified Data.ByteString.Char8 as B8
-import Data.ByteString (ByteString)
-import Data.Maybe
-import Data.Char
-import Debug.Trace
+import           Diagrams.Prelude hiding (diff,beg,end,trace)
+import           MiRanda.Parameter
+import           MiRanda.Types
+import           Text.Printf
+
+import           Debug.Trace
 
 aColor = red
 gColor = green
@@ -43,6 +45,20 @@ siteColor = darkorange
 w' = 1.75 * h
 h = 0.64
 w = 0.6 * h
+monoW = 0.6
+monoH = 1
+serifFont = "Times New Roman"
+
+conStr = "Conservation"
+
+
+serifStr c str =
+  let n = fromIntegral $ length str
+      localSize = 0.8
+  in text str # font serifFont
+              # fontSize localSize
+              # fc c <>
+     rect (n * 0.5) monoH # lcA transparent
 
 cChar c = (alignedText 0.44 0.44 "C" # fc c <>
            rect w' h # lcA transparent) # centerXY
@@ -134,11 +150,13 @@ diff (P up dn) str1' str2' =
            
 -- plotMultiAlign :: UTR -> [UTR] -> 
 plotMultiAlign seedRange siteRange utr utrs =
-  let names = map ((\l ->
-                     genus l `B8.append`
-                     " " `B8.append` species l) .
-                   (taxMap `at`) .
-                   taxonomyID) ss
+  let ns = (map (commonName .
+                 (taxMap `at`) .
+                 taxonomyID) ss) ++ [conStr]
+      nameLen = maximum $ map B8.length ns 
+      nameStrs = map ((printf ("%" ++ show nameLen ++ "s  ")) . B8.unpack) ns
+      names = init nameStrs
+      con   = last nameStrs
       utrs' = sortBy
               (compare `on`
                ((diff siteRange (extractSeq utr)) . extractSeq)) $
@@ -152,11 +170,11 @@ plotMultiAlign seedRange siteRange utr utrs =
                 else 1) $
           B8.unpack $ seqStr
       strLen = UV.maximum s
-      seedBeg = fromJust $ UV.find (== (1+beg seedRange)) s
-      seedEnd' = fromJust $ UV.find (== (1+end seedRange)) s
+      seedBeg = fromJust $ UV.findIndex (== (1+beg seedRange)) s
+      seedEnd' = fromJust $ UV.findIndex (== (end seedRange)) s
       seedEnd = seedEnd' + 1
-      siteBeg = fromJust $ UV.find (== (1+beg siteRange)) s
-      siteEnd' = fromJust $ UV.find (== (1+end siteRange)) s
+      siteBeg = fromJust $ UV.findIndex (== (1+beg siteRange)) s
+      siteEnd' = fromJust $ UV.findIndex (== (end siteRange)) s
       siteEnd = siteEnd' + 1
       siteLen = siteEnd - siteBeg
       (exBeg,exEnd) = if siteLen < 60
@@ -172,15 +190,22 @@ plotMultiAlign seedRange siteRange utr utrs =
       seedRE = seedEnd - exBeg
       siteRB = siteBeg - exBeg
       siteRE = siteEnd - exBeg
-      chss = map
-             (splitPlaces
-              [siteRB
-              ,seedRB - siteRB
-              ,seedRE - seedRB
-              ,siteRE - seedRE
-              ,exEnd - siteRE] . B8.unpack) strs
-      
-      dMatrix = map (plotOneChain siteStas) chss 
+      toFivePart = trace ("exBeg:" ++ show exBeg ++ "\n" ++
+                          "exEnd:" ++ show exEnd ++ "\n" ++
+                          "seedBeg:" ++ show seedBeg ++ "\n" ++
+                          "seedEnd:" ++ show seedEnd ++ "\n" ++
+                          "siteBeg:" ++ show siteBeg ++ "\n" ++
+                          "siteEnd:" ++ show siteEnd ++ "\n" 
+
+                         ) $
+
+                   splitPlaces
+                   [siteRB
+                   ,seedRB - siteRB
+                   ,seedRE - seedRB
+                   ,siteRE - seedRE
+                   ,exEnd - siteRE]
+      chss = map (toFivePart . B8.unpack) strs
       strs = map (extractStr (exBeg,exEnd) . exGS . alignment) ss
       sites = map (extractStr (siteRB,siteRE)) strs
       siteStas = splitPlacesBlanks
@@ -213,10 +238,55 @@ plotMultiAlign seedRange siteRange utr utrs =
                    in (a,c,g,t,u)
                  ) [0..(B8.length $ head strs)-1]
       at = (IM.!)
-      charStas = plotSeqStas True beforeSite ++
+      dMatrix = map (plotOneChain siteStas) chss
+      fstLine = (\(a:b:c:d:e:[]) ->
+                  let dC = serifStr seedColor "Seed" ===
+                           hrule (fromIntegral (length c)* monoW)
+                           # lw 0.1
+                           # lc seedColor # centerX ===
+                           strutY 0.5 ===
+                           hcat c # centerX
+                      dM = serifStr siteColor
+                           ("Binding Site (" ++ show (1+beg siteRange) ++
+                            ", " ++ show (end siteRange) ++ ")") ===
+                           hrule (fromIntegral (length $ b++c++d) * monoW)
+                           # lw 0.1
+                           # lc siteColor # centerX ===
+                           (hcat b # alignB ||| dC # alignB |||
+                            hcat d # alignB) # centerX
+                  in hcat a # alignB ||| dM # alignB |||
+                     hcat e # alignB
+                  ) $
+                toFivePart $ head dMatrix
+      tailLs = (map hcat $ tail dMatrix)
+      charStas = hcat' (CatOpts Distrib monoW Proxy) $
+                 plotSeqStas True beforeSite ++
                  plotSeqStas False siteStr ++
                  plotSeqStas True afterSite
-  in (dMatrix ++ [charStas])
+      rs = map
+           ((\(a,b,c) ->
+              printf "%d ~ %d : %d" a b c :: String
+            ) . calcRange (exBeg,exEnd)) ss
+      rLen = maximum $ map length rs            
+      dM = vcat $ fstLine : (tailLs ++ [strutY 0.5 ===charStas])
+      coef = 0.5
+      lhs = vcat (map
+                  (\nm ->
+                    text nm # font serifFont <>
+                    rect (fromIntegral nameLen * coef) 1
+                    # lcA transparent
+                  ) names) ===
+            (text con # font serifFont <>
+             rect (fromIntegral nameLen * coef) ( 0.5 + 4 * h)
+             # lcA transparent
+            )
+      rhs = vcat (map
+                  (\r ->
+                    text r # font serifFont <>
+                    rect (fromIntegral rLen * coef) 1
+                    # lcA transparent
+                  ) rs) === strutY (0.5 + 4 * h)
+  in (lhs # alignB ||| dM # alignB ||| rhs # alignB) # centerXY
    
   where 
     plotOneChain (bp1:bp2:bp3:[]) (bwBeg:b1:b2:b3:bwEnd:[]) =
@@ -227,9 +297,9 @@ plotMultiAlign seedRange siteRange utr utrs =
       in map charA bwBeg ++ d1 ++ d2 ++ d3 ++ map charA bwEnd
       where
         charA ch = text [ch] <>
-                   rect 0.6 1 # lcA transparent
+                   rect monoW monoH # lcA transparent
         charCP (ch,p) = text [ch] <>
-                rect 0.6 1 # lcA transparent
+                rect monoW monoH # lcA transparent
                 # chooseColor
           where 
             chooseColor = case ch of
@@ -250,10 +320,23 @@ plotMultiAlign seedRange siteRange utr utrs =
             'T' -> (ch,t)
             'U' -> (ch,u)
             _ -> (ch,0)
+    plotOneChain _ _ = error "Impossible: plotOneChain"
             
 extractStr (i,j) = B8.take (j-i) . B8.drop i
 exGS = (\(GS str) -> str)
 extractSeq = exGS . alignment
+
+calcRange (i,j) = (\s ->
+                      let (str1,str2) = B8.splitAt i s
+                          (str3,str4) = B8.splitAt (j-i) str2
+                          a = length $
+                              B8.findIndices isAlpha str1
+                          b = length $
+                              B8.findIndices isAlpha str3
+                          c = length $
+                              B8.findIndices isAlpha str4
+                      in (a,b,a+b+c)
+                    ) . extractSeq
 
 toRange (i,j) str =
   let i' = B8.length $ B8.filter isAlpha $ B8.take i str
