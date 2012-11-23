@@ -18,13 +18,6 @@ import Data.ByteString (ByteString)
 import Data.Vector.Unboxed
 
 
-
-data TSP = TSP
-  {spsM8orM7M8 :: {-# UNPACK #-} !Double
-  ,pssM7A1 :: {-# UNPACK #-} !Double
-  ,taValue :: {-# UNPACK #-} !Double
-  } deriving (Show,Eq)
-             
 data UTR = UTR
   {geneSymbol :: ByteString
   ,taxonomyID :: Int
@@ -125,16 +118,28 @@ data Coef = Coef
   ,intercept :: {-# UNPACK #-} !Double
   } deriving (Eq,Ord)
    
-            
+data RawScore = RS
+  {pairingScore :: PairScore
+  ,auScore :: AUScore
+  ,posScore :: PosScore
+  } deriving (Show,Eq,Ord)
+
+data ContextPlusScore = CPS
 
 newtype PairScore = PairScore Double
-                    deriving (Show,Eq)
+                    deriving (Show,Eq,Ord)
 newtype AUScore = AUScore Double
-                  deriving (Show,Eq)
+                  deriving (Show,Eq,Ord)
 
 newtype PosScore = PosScore Double
-                   deriving (Show,Eq)
+                   deriving (Show,Eq,Ord)
 
+newtype SPScore = SPScore Double
+                   deriving (Show,Eq,Ord)
+                            
+newtype TAScore = TAScore Double
+                   deriving (Show,Eq,Ord)
+                            
 instance Show SeedType where
   show s =
     case s of
