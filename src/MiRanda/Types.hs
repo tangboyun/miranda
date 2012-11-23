@@ -64,7 +64,7 @@ data Stat = Stat
              
 data Pair = P
   { beg :: {-# UNPACK #-} !Int -- begin at 0
-  , end :: {-# UNPACK #-} !Int -- include end
+  , end :: {-# UNPACK #-} !Int -- not include end
   } deriving (Show,Eq)
             
 data Site = Site
