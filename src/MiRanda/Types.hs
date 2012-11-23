@@ -17,6 +17,7 @@ module MiRanda.Types where
 import Data.ByteString (ByteString)
 import Data.Vector.Unboxed
 
+
 data UTR = UTR
   {geneSymbol :: ByteString
   ,taxonomyID :: Int
@@ -63,7 +64,7 @@ data Stat = Stat
              
 data Pair = P
   { beg :: {-# UNPACK #-} !Int -- begin at 0
-  , end :: {-# UNPACK #-} !Int -- include end
+  , end :: {-# UNPACK #-} !Int -- not include end
   } deriving (Show,Eq)
             
 data Site = Site
@@ -102,22 +103,43 @@ data SeedType = M8   -- ^ 8mer site
               | M6   -- ^ 6mer site                
               | M6O  -- ^ Offset 6mer site
               | Imperfect -- ^ imperfect seed site
-              deriving (Eq,Ord)
+              deriving (Eq,Ord,Enum)
 
-newtype PairScore = PS Double
-                    deriving (Show,Eq)
-newtype AUScore = AU Double
-                  deriving (Show,Eq)
+data ContextScore = CS
+  {contextScore :: {-# UNPACK #-} !Double
+  ,pairingContrib :: {-# UNPACK #-} !Double
+  ,localAUContrib :: {-# UNPACK #-} !Double
+  ,positionContrib :: {-# UNPACK #-} !Double
+  ,siteTypeContrib :: {-# UNPACK #-} !Double
+  } deriving (Eq,Ord,Show)
+   
+data Coef = Coef
+  {slope :: {-# UNPACK #-} !Double
+  ,intercept :: {-# UNPACK #-} !Double
+  } deriving (Eq,Ord)
+   
+data RawScore = RS
+  {pairingScore :: PairScore
+  ,auScore :: AUScore
+  ,posScore :: PosScore
+  } deriving (Show,Eq,Ord)
 
-data Ch = ChA
-        | ChT
-        | ChU
-        | ChG
-        | ChC
-        | Gap
-        deriving (Eq)
+data ContextScorePlus = CSP
 
+newtype PairScore = PairScore Double
+                    deriving (Show,Eq,Ord)
+newtype AUScore = AUScore Double
+                  deriving (Show,Eq,Ord)
 
+newtype PosScore = PosScore Double
+                   deriving (Show,Eq,Ord)
+
+newtype SPScore = SPScore Double
+                   deriving (Show,Eq,Ord)
+                            
+newtype TAScore = TAScore Double
+                   deriving (Show,Eq,Ord)
+                            
 instance Show SeedType where
   show s =
     case s of
