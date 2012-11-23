@@ -124,7 +124,7 @@ data RawScore = RS
   ,posScore :: PosScore
   } deriving (Show,Eq,Ord)
 
-data ContextPlusScore = CPS
+data ContextScorePlus = CSP
 
 newtype PairScore = PairScore Double
                     deriving (Show,Eq,Ord)

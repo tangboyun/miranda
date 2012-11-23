@@ -82,6 +82,69 @@ psCoefMap = IM.fromList
             ,(fromEnum M6O, Just (Coef 0.000049 (-0.033)))
             ,(fromEnum Imperfect, Nothing)]
 
+auMinMaxMap :: IntMap (Maybe (Double,Double))
+auMinMaxMap = IM.fromList
+              [(fromEnum M8, Just (0.107, 0.966))
+              ,(fromEnum M7M8, Just (0.093,0.990))
+              ,(fromEnum M7A1, Just (0.122,0.984))
+              ,(fromEnum M6, Just (0.071,0.989))
+              ,(fromEnum M6O, Just (0.071,0.989))
+              ,(fromEnum Imperfect, Nothing)]
+
+paMinMaxMap :: IntMap (Maybe (Double,Double))
+paMinMaxMap = IM.fromList
+              [(fromEnum M8, Just (0, 7))
+              ,(fromEnum M7M8, Just (0,7.5))
+              ,(fromEnum M7A1, Just (0.5,7.5))
+              ,(fromEnum M6, Just (0,7.0))
+              ,(fromEnum M6O, Just (0,7.0))
+              ,(fromEnum Imperfect, Nothing)]
+
+psMinMaxMap :: IntMap (Maybe (Double,Double))
+psMinMaxMap = IM.fromList
+              [(fromEnum M8, Just (4, 1500))
+              ,(fromEnum M7M8, Just (3,1500))
+              ,(fromEnum M7A1, Just (3,1500))
+              ,(fromEnum M6, Just (3,1500))
+              ,(fromEnum M6O, Just (3,1500))
+              ,(fromEnum Imperfect, Nothing)]
+
+taMinMaxMap :: IntMap (Maybe (Double,Double))
+taMinMaxMap = IM.fromList
+              [(fromEnum M8, Just (1.64,3.96))
+              ,(fromEnum M7M8, Just (1.64,3.96))
+              ,(fromEnum M7A1, Just (1.64,3.96))
+              ,(fromEnum M6, Just (1.64,3.96))
+              ,(fromEnum M6O, Just (1.64,3.96))
+              ,(fromEnum Imperfect, Just (1.64,3.96))]
+
+spsMinMaxMap :: IntMap (Maybe (Double,Double))
+spsMinMaxMap = IM.fromList
+              [(fromEnum M8, Just (-12.36,-2.96))
+              ,(fromEnum M7M8, Just (-12.36,-2.96))
+              ,(fromEnum M7A1, Just (-10,-0.4))
+              ,(fromEnum M6, Just (-10,-0.4))
+              ,(fromEnum M6O, Just (-10,-0.4))
+              ,(fromEnum Imperfect, Nothing)]
+
+auRegMeanMap :: IntMap (Maybe (Double,Double))
+auRegMeanMap = IM.fromList
+              [(fromEnum M8, Just (-0.356,0.569))
+              ,(fromEnum M7M8, Just (-0.366,0.509))
+              ,(fromEnum M7A1, Just (-0.187,0.555))
+              ,(fromEnum M6, Just (-0.084,0.524))
+              ,(fromEnum M6O, Just (-0.084,0.524))
+              ,(fromEnum Imperfect, Nothing)]
+               
+paRegMeanMap :: IntMap (Maybe (Double,Double))
+paRegMeanMap = IM.fromList
+              [(fromEnum M8, Just (-0.147,0.306))
+              ,(fromEnum M7M8, Just (-0.139,0.285))
+              ,(fromEnum M7A1, Just (-0.048,0.236))
+              ,(fromEnum M6, Just (-0.048,0.306))
+              ,(fromEnum M6O, Just (-0.048,0.306))
+              ,(fromEnum Imperfect, Nothing)]
+
 
 -- | 6mer SPS value for Conserved vertebrate miRNAs
 spsMapmer6 :: IntMap Double
@@ -173,3 +236,4 @@ spsMapmer6 = IM.fromList
              ,(12423,-4.39)
              ,(2342,-8.57)
              ,(6228,-9.38)]
+

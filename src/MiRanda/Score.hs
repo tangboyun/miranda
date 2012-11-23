@@ -74,7 +74,6 @@ getPairScore s (Align miR3' mR5' b) =
              else scanScore (idx+1) 0 preScore
       | otherwise = let offset = abs $ miIdx - utrIdx
                     in maxScore - max 0 (0.5 * fromIntegral (offset - 2))
-
   
 getAUScore :: ByteString -> Site -> AUScore
 getAUScore utr site =
@@ -113,7 +112,6 @@ getAUScore utr site =
                         then s
                         else 0) dn30 ds
   in AUScore $ local / total
-   
 
 getSiteContrib :: SeedType -> Maybe Double
 getSiteContrib st = siteContribMap ! fromEnum st
@@ -133,10 +131,8 @@ getContextScore st (RS (PairScore pairS) (AUScore auS) (PosScore posS)) =
     toScore :: Double -> Double -> Coef -> Double
     toScore score mean (Coef sl inter) = score * sl + inter - mean
 
-
-getContextPlusScore :: SeedType -> ByteString -> RawScore -> Maybe ContextPlusScore
-getContextPlusScore st seedWithN8 rawScore = undefined
-
+getContextScorePlus :: SeedType -> ByteString -> RawScore -> Maybe ContextPlusScore
+getContextScorePlus st seedWithN8 rawScore = undefined
 
 getSPSTA :: SeedType -> ByteString -> (Maybe SPScore, Maybe TAScore)
 getSPSTA st seedWithN8 =
