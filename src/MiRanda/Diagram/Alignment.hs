@@ -273,7 +273,7 @@ plotMultiAlign seedRange siteRange utr utrs =
                     rect (fromIntegral rLen * coef) 1
                     # lcA transparent
                   ) rs) === strutY (0.5 + 4 * h)
-  in (lhs # alignB ||| dM # alignB ||| rhs # alignB) # centerXY
+  in pad 1.05 $ (lhs # alignB ||| dM # alignB ||| rhs # alignB) # centerXY
    
   where 
     plotOneChain (bp1:bp2:bp3:[]) (bwBeg:b1:b2:b3:bwEnd:[]) =
