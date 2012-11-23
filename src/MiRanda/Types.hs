@@ -17,6 +17,14 @@ module MiRanda.Types where
 import Data.ByteString (ByteString)
 import Data.Vector.Unboxed
 
+
+
+data TSP = TSP
+  {spsM8orM7M8 :: {-# UNPACK #-} !Double
+  ,pssM7A1 :: {-# UNPACK #-} !Double
+  ,taValue :: {-# UNPACK #-} !Double
+  } deriving (Show,Eq)
+             
 data UTR = UTR
   {geneSymbol :: ByteString
   ,taxonomyID :: Int
@@ -102,21 +110,30 @@ data SeedType = M8   -- ^ 8mer site
               | M6   -- ^ 6mer site                
               | M6O  -- ^ Offset 6mer site
               | Imperfect -- ^ imperfect seed site
-              deriving (Eq,Ord)
+              deriving (Eq,Ord,Enum)
 
-newtype PairScore = PS Double
+data ContextScore = CS
+  {contextScore :: {-# UNPACK #-} !Double
+  ,pairingContrib :: {-# UNPACK #-} !Double
+  ,localAUContrib :: {-# UNPACK #-} !Double
+  ,positionContrib :: {-# UNPACK #-} !Double
+  ,siteTypeContrib :: {-# UNPACK #-} !Double
+  } deriving (Eq,Ord,Show)
+   
+data Coef = Coef
+  {slope :: {-# UNPACK #-} !Double
+  ,intercept :: {-# UNPACK #-} !Double
+  } deriving (Eq,Ord)
+   
+            
+
+newtype PairScore = PairScore Double
                     deriving (Show,Eq)
-newtype AUScore = AU Double
+newtype AUScore = AUScore Double
                   deriving (Show,Eq)
 
-data Ch = ChA
-        | ChT
-        | ChU
-        | ChG
-        | ChC
-        | Gap
-        deriving (Eq)
-
+newtype PosScore = PosScore Double
+                   deriving (Show,Eq)
 
 instance Show SeedType where
   show s =
