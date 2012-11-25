@@ -145,6 +145,33 @@ paRegMeanMap = IM.fromList
               ,(fromEnum M6O, Just (-0.048,0.306))
               ,(fromEnum Imperfect, Nothing)]
 
+psRegMeanMap :: IntMap (Maybe (Double,Double))
+psRegMeanMap = IM.fromList
+               [(fromEnum M8, Just (0.378,0.299))
+               ,(fromEnum M7M8, Just (0.212,0.289))
+               ,(fromEnum M7A1, Just (0.164,0.303))
+               ,(fromEnum M6, Just (0.094,0.293))
+               ,(fromEnum M6O, Just (0.094,0.293))
+               ,(fromEnum Imperfect, Nothing)]
+
+taRegMeanMap :: IntMap (Maybe (Double,Double))
+taRegMeanMap = IM.fromList
+               [(fromEnum M8, Just (0.388,0.792))
+               ,(fromEnum M7M8, Just (0.243,0.796))
+               ,(fromEnum M7A1, Just (0.239,0.794))
+               ,(fromEnum M6, Just (0.106,0.792))
+               ,(fromEnum M6O, Just (0.106,0.792))
+               ,(fromEnum Imperfect, Nothing)]
+
+spsRegMeanMap :: IntMap (Maybe (Double,Double))
+spsRegMeanMap = IM.fromList
+               [(fromEnum M8, Just (0.341,0.476))
+               ,(fromEnum M7M8, Just (0.207,0.457))
+               ,(fromEnum M7A1, Just (0.220,0.450))
+               ,(fromEnum M6, Just (0.098,0.437))
+               ,(fromEnum M6O, Just (0.098,0.437))
+               ,(fromEnum Imperfect, Nothing)]
+
 
 -- | 6mer SPS value for Conserved vertebrate miRNAs
 spsMapmer6 :: IntMap Double
