@@ -131,8 +131,6 @@ getContextScore st (RS (PairScore pairS) (AUScore auS) (PosScore posS)) =
     toScore :: Double -> Double -> Coef -> Double
     toScore score mean (Coef sl inter) = score * sl + inter - mean
 
-getContextScorePlus :: SeedType -> ByteString -> RawScore -> Maybe ContextPlusScore
-getContextScorePlus st seedWithN8 rawScore = undefined
 
 getSPSTA :: SeedType -> ByteString -> (Maybe SPScore, Maybe TAScore)
 getSPSTA st seedWithN8 =
@@ -159,3 +157,42 @@ getSPSTA st seedWithN8 =
     pack bs =
       let str = B8.unpack $ B8.reverse bs
       in sum $ map (\(i,c) -> cToI c * 4^i) $ zip [0..] str
+
+getContextScorePlus :: SeedType -> ByteString -> RawScore -> Maybe ContextScorePlus
+getContextScorePlus st seedWithN8 rawScore =
+  let (spsScore,taScore) = getSPSTA st seedWithN8
+      (PairScore paS) = pairingScore rawScore
+      (AUScore auS) = auScore rawScore
+      (PosScore psS) = posScore rawScore
+      spsS = case spsScore of
+               Nothing -> Nothing
+               Just (SPScore s) -> Just s
+      taS = case taScore of
+              Nothing -> Nothing
+              Just (TAScore t) -> Just t
+      paS' = fun <$> pure paS <*>
+             paMinMaxMap ! fromEnum st <*>
+             paRegMeanMap ! fromEnum st
+      auS' = fun <$> pure auS <*>
+             auMinMaxMap ! fromEnum st <*>
+             auRegMeanMap ! fromEnum st
+      psS' = fun <$> pure psS <*>
+             psMinMaxMap ! fromEnum st <*>
+             psRegMeanMap ! fromEnum st
+      spsS' = fun <$> spsS <*>
+              spsMinMaxMap ! fromEnum st <*>
+              spsRegMeanMap ! fromEnum st
+      taS' = fun <$> taS <*>
+             taMinMaxMap ! fromEnum st <*>
+             taRegMeanMap ! fromEnum st
+      fcS = fcMap ! fromEnum st
+      csp = foldl1' (\a b -> (+) <$> a <*> b)
+            [fcS,paS',auS',psS',spsS',taS']
+  in CSP <$> csp <*> paS' <*> auS' <*> psS' <*> taS' <*> spsS' <*>
+             fcS
+     
+  where
+    fun s (minV,maxV) (reg,mean) =
+      let s' = (s - minV) / (maxV - minV)
+      in reg * (s' - mean)
+   

@@ -172,6 +172,14 @@ spsRegMeanMap = IM.fromList
                ,(fromEnum M6O, Just (0.098,0.437))
                ,(fromEnum Imperfect, Nothing)]
 
+fcMap :: IntMap (Maybe Double)
+fcMap = IM.fromList
+        [(fromEnum M8, Just (-0.247))
+        ,(fromEnum M7M8, Just (-0.120))
+        ,(fromEnum M7A1, Just (-0.074))
+        ,(fromEnum M6, Just (-0.019))
+        ,(fromEnum M6O, Just (-0.019))
+        ,(fromEnum Imperfect, Nothing)]
 
 -- | 6mer SPS value for Conserved vertebrate miRNAs
 spsMapmer6 :: IntMap Double

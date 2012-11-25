@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE GADTs, DisambiguateRecordFields #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : 
@@ -112,7 +112,17 @@ data ContextScore = CS
   ,positionContrib :: {-# UNPACK #-} !Double
   ,siteTypeContrib :: {-# UNPACK #-} !Double
   } deriving (Eq,Ord,Show)
-   
+
+data ContextScorePlus = CSP
+  {contextScorePlus :: {-# UNPACK #-} !Double
+  ,pairingContribPlus :: {-# UNPACK #-} !Double
+  ,localAUContribPlus :: {-# UNPACK #-} !Double
+  ,positionContribPlus :: {-# UNPACK #-} !Double
+  ,taContribPlus :: {-# UNPACK #-} !Double
+  ,spsContribPlus :: {-# UNPACK #-} !Double
+  ,siteTypeContribPlus :: {-# UNPACK #-} !Double
+  } deriving (Eq,Ord,Show)
+             
 data Coef = Coef
   {slope :: {-# UNPACK #-} !Double
   ,intercept :: {-# UNPACK #-} !Double
@@ -124,7 +134,6 @@ data RawScore = RS
   ,posScore :: PosScore
   } deriving (Show,Eq,Ord)
 
-data ContextScorePlus = CSP
 
 newtype PairScore = PairScore Double
                     deriving (Show,Eq,Ord)
