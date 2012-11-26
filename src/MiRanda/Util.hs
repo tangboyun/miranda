@@ -77,11 +77,11 @@ getSeedType (Align miR3' mR5' b) =
                else Imperfect
 
 
-getSeedMatchSite :: Site -> Pair
+getSeedMatchSite :: MSite -> Pair
 getSeedMatchSite site =
-  let P _ down = mRNARange site
-      (Align miR3' mR5' b) = align site
-      seed = seedType site
+  let P _ down = _mRNARange site
+      (Align miR3' mR5' b) = _align site
+      seed = _seedType site
       (idxV,n) = seedToIdx miR3'
       at = UV.unsafeIndex
       fstC = UV.head idxV

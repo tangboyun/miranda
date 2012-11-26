@@ -28,6 +28,17 @@ import MiRanda.Util
 (!) :: IM.IntMap a -> IM.Key -> a
 (!) = (IM.!)
 
+getRawScore :: UTR -> Int -> MSite -> RawScore
+getRawScore utr l s =
+  let posScore = getPosScore (_mRNARange s) l
+      paScore = getPairScore (_seedType s) (_align s)
+      utrSD = B8.filter isAlpha $ unGS $ alignment utr
+      auScore = getAUScore utrSD s
+  in RS paScore auScore posScore
+
+getPosScore :: Pair -> Int -> PosScore
+getPosScore (P a b) utrL = PosScore $ min (fromIntegral a) (fromIntegral $ utrL-1-b)
+
 getPairScore :: SeedType -> Align -> PairScore
 getPairScore s (Align miR3' mR5' b) =
   PairScore $
@@ -75,13 +86,13 @@ getPairScore s (Align miR3' mR5' b) =
       | otherwise = let offset = abs $ miIdx - utrIdx
                     in maxScore - max 0 (0.5 * fromIntegral (offset - 2))
   
-getAUScore :: ByteString -> Site -> AUScore
+getAUScore :: ByteString -> MSite -> AUScore
 getAUScore utr site =
   let P up dn = getSeedMatchSite site
       (us,ds) = let ls = map (1/) [2.0..]
                     ls1 = 1:ls
                     ls2 = 0.5:ls
-                in case seedType site of
+                in case _seedType site of
                   M8 -> (ls1,ls)
                   M7M8 -> (ls1,ls2)
                   M7A1 -> (ls,ls)
@@ -158,9 +169,10 @@ getSPSTA st seedWithN8 =
       let str = B8.unpack $ B8.reverse bs
       in sum $ map (\(i,c) -> cToI c * 4^i) $ zip [0..] str
 
-getContextScorePlus :: SeedType -> ByteString -> RawScore -> Maybe ContextScorePlus
-getContextScorePlus st seedWithN8 rawScore =
-  let (spsScore,taScore) = getSPSTA st seedWithN8
+getContextScorePlus :: SeedType -> Align -> RawScore -> Maybe ContextScorePlus
+getContextScorePlus st ali rawScore =
+  let seedWithN8 = extractSeedN8 ali
+      (spsScore,taScore) = getSPSTA st seedWithN8
       (PairScore paS) = pairingScore rawScore
       (AUScore auS) = auScore rawScore
       (PosScore psS) = posScore rawScore
@@ -194,4 +206,5 @@ getContextScorePlus st seedWithN8 rawScore =
     fun s (minV,maxV) (reg,mean) =
       let s' = (s - minV) / (maxV - minV)
       in reg * (s' - mean)
-   
+    extractSeedN8 (Align miR _ _) = B8.take 7 $
+                                    B8.drop 1 $ B8.reverse miR

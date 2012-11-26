@@ -22,7 +22,7 @@ import MiRanda.Types
 import MiRanda.Util
 import Control.Applicative
 
-parseSite :: Parser Site
+parseSite :: Parser MSite
 parseSite = do
   "   Forward:" .*> skipWhile (/= '\n') *> endOfLine
   s1 <- string "   Query:"
@@ -52,9 +52,9 @@ parseSite = do
           (round $ fromIntegral al * guRatio)
       ali = Align miR utr b
       st = getSeedType ali
-  return $ Site structS enS miRang utrRang al m st ali
+  return $ MSite (MScore structS enS) miRang utrRang al m st ali
 
-parseRecord :: Parser Record
+parseRecord :: Parser MRecord
 parseRecord = do
   ss <- many1 parseSite
   miRId <- string ">>" *> takeWhile1 (/= '\t') <* char '\t'
@@ -67,8 +67,7 @@ parseRecord = do
   miRL <- decimal <* char '\t'
   utrL <- decimal <* char '\t' <* skipSpace
   ps <- decimal `sepBy1` char ' '
-  return $ Record miRId utrId ss $
-    Stat totS totE maxS maxE sta miRL utrL ps
+  return $ MRecord miRId utrId ss sta miRL utrL
 
-parseRecords :: Parser [Record]
+parseRecords :: Parser [MRecord]
 parseRecords = parseRecord `sepBy1` endOfLine

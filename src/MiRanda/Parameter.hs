@@ -19,6 +19,7 @@ import Data.IntMap.Strict (IntMap)
 import qualified Data.IntMap.Strict as IM
 import Data.ByteString (ByteString)
 
+  
 taxMap :: IntMap Latin
 taxMap =
   IM.fromList

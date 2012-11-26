@@ -21,15 +21,107 @@ import           Data.ByteString.Lazy.Builder
 import           Data.ByteString.Lazy.Builder.ASCII
 import qualified Data.ByteString.Lazy.Char8 as L8
 import           Data.Char
+import           Data.Function
+import qualified Data.IntMap.Strict as IM
+import           Data.List
+import           Data.Maybe
 import           Data.Monoid
+import           Data.Time
+import           MiRanda.Parameter
 import           MiRanda.Parser
 import           MiRanda.Types
+import           System.Directory
+import           System.FilePath
+import           System.IO
+import           System.Process
+import           MiRanda.Score
 
-readRecords :: FilePath -> IO [Record]
-readRecords fp =
-  L8.readFile fp >>= f . parse parseRecords . preprocess
+
+mkProcess :: FilePath -> FilePath -> IO CreateProcess
+mkProcess miRFile utrFile = do
+  prog <- findExecutable "miranda"
+  case prog of
+    Nothing -> error "Cant find miranda in PATH."
+    Just program ->
+      let cmdSpec = RawCommand program [miRFile,utrFile]
+      in return $
+         CreateProcess cmdSpec Nothing Nothing
+         Inherit (CreatePipe) Inherit False False
+
+      
+
+miRNAPredict :: String -> Fasta -> FilePath -> IO [Record]
+miRNAPredict spe miFasta@(Fasta sid _) allUTRFile =
+  do
+    tmpDir <- getTemporaryDirectory
+    let miFile = tmpDir </> B8.unpack sid <.> "fa"
+        utrFile = tmpDir </> B8.unpack sid <.> "utr"
+    writeMiR miFile miFasta
+    dumpGenome spe allUTRFile utrFile
+    proP <- mkProcess miFile utrFile
+    (_,Just outH,_,_) <- createProcess proP
+    mRs <- return . toMRecords =<< L8.hGetContents outH
+    utrSets <- readUTRs allUTRFile (map _mRNA mRs)
+    return $ toRecord spe mRs utrSets
+
+dumpGenome :: String -> FilePath -> FilePath -> IO ()
+dumpGenome specName inFile outFile =
+  L8.readFile inFile >>=
+  L8.writeFile outFile . toFastas .
+  filter
+  (\utr ->
+    taxonomyID utr == orgToTaxID specName
+  ) . toUTRs . L8.filter (/= '\r')
+  
+orgToTaxID :: String -> Int
+orgToTaxID s =
+  snd $ fromJust $ find (\(a,b) -> s == B8.unpack a) $
+  map (\(i,l) -> (commonName l,i)) $ IM.toList taxMap
+
+toRecord :: String -> [MRecord] -> [[UTR]] -> [Record]
+toRecord str mRs utrSets =
+  zipWith f mRs utrSets
   where
-    f (Done _ r) = return r
+    toSites mR utr =
+      let mRL = mRNALen mR
+      in map
+         (\mSite ->
+           let mS = _mScore mSite
+               rawS = getRawScore utr mRL mSite
+               st = _seedType mSite
+               cS = getContextScore st rawS
+               csP = getContextScorePlus st al rawS
+               uR = _mRNARange mSite
+               m = _match mSite
+               al = _align mSite
+           in Site mS rawS cS csP uR m st al
+         ) (sites mR)
+      
+    f mR utrSet =
+      let utrID = _mRNA mR
+          miID = _miRNA mR
+          ([u],us) = partition ((== orgToTaxID str) . taxonomyID) utrSet
+          ss = toSites mR u
+      in Record miID utrID u us ss
+          
+
+readUTRs :: FilePath -> [B8.ByteString] -> IO [[UTR]]
+readUTRs fp genes =
+  L8.readFile fp >>=
+  return . myFilter genes .
+  groupBy ((==) `on` geneSymbol) . toUTRs
+  where
+    myFilter _ [] = []
+    myFilter [] _ = []
+    myFilter ag@(g:gs) (us:uss) =
+      if geneSymbol (head us) == g
+      then us : myFilter gs uss
+      else myFilter ag uss
+           
+toMRecords :: ByteString -> [MRecord]
+toMRecords = f . parse parseRecords . preprocess
+  where
+    f (Done _ r) = r
     f e = error $ show e
     
 preprocess :: ByteString -> ByteString
@@ -48,13 +140,12 @@ toUTRs = map
             case L8.readInt tax of
               Just (taxId,_) -> UTR (L8.toStrict syb) taxId (GS $ L8.toStrict sdata)
               _              -> error "Fail in parse UTR sequence."
-          ) . (L8.split '\t')) . L8.lines 
+          ) . (L8.split '\t')) . tail . L8.lines 
 
 toFastas :: [UTR] -> ByteString
 toFastas = toLazyByteString . intercalate '\n' .
            map (\utr ->
                  charUtf8 '>' <> byteString (geneSymbol utr) <>
-                 charUtf8 '\t' <> intDec (taxonomyID utr) <>
                  charUtf8 '\n' <>
                  alignToSeq utr <>
                  charUtf8 '\n'
@@ -84,3 +175,19 @@ countGene str = if L8.null str
       if j - i == 1
       then (acc+1) `seq` go (acc+1) (j:is)
       else go acc (j:is)
+
+readFasta :: FilePath -> IO [Fasta]
+readFasta fp =
+  L8.readFile fp >>=
+  return .
+  map
+  (\(h:sd) ->
+    Fasta (L8.toStrict $ L8.tail h) (SD $ B8.concat $ map (L8.toStrict . L8.filter isAlpha) sd)) .
+  groupBy (\_ b -> L8.head b /= '>') .
+  filter (not . L8.null) . L8.lines . L8.filter (/= '\r')
+
+writeMiR :: FilePath -> Fasta -> IO ()
+writeMiR fp f =
+  B8.writeFile fp $ 
+  (B8.cons '>' $ seqlabel f) `B8.append` "\n" `B8.append`
+  (unSD $ seqdata f)

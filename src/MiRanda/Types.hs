@@ -17,6 +17,10 @@ module MiRanda.Types where
 import Data.ByteString (ByteString)
 import Data.Vector.Unboxed
 
+data Fasta = Fasta
+  { seqlabel :: ByteString
+  , seqdata :: SeqData
+  } deriving (Show,Eq)
 
 data UTR = UTR
   {geneSymbol :: ByteString
@@ -24,17 +28,51 @@ data UTR = UTR
   ,alignment :: GapSeq
   } deriving (Show,Eq)
 
-newtype GapSeq = GS ByteString
-               deriving (Show,Eq)
-newtype SeqData = SD ByteString
-                deriving (Show,Eq)
-                         
+newtype GapSeq = GS
+  {unGS :: ByteString
+  } deriving (Show,Eq)
+
+newtype SeqData = SD
+  { unSD :: ByteString }
+   deriving (Show,Eq)
+
 data Record = Record
-  { miRNA :: ByteString
-  , mRNA :: ByteString
-  , sites :: [Site]
-  , statistics :: Stat
+  {miRNA :: ByteString
+  ,gene :: ByteString
+  ,utr :: UTR
+  ,homoUTRs :: [UTR]
+  ,predictedSites :: [Site]
+  } deriving (Show,Eq)
+
+data Site = Site
+  { miRandaScore :: MScore
+  , rawScore :: RawScore
+  , contextScore :: Maybe ContextScore
+  , contextScorePlus :: Maybe ContextScorePlus
+  , utrRange :: Pair
+  , match :: Match
+  , seedType :: SeedType
+  , align :: Align
+  } deriving (Show,Eq)
+   
+data MRecord = MRecord
+  { _miRNA :: ByteString
+  , _mRNA :: ByteString
+  , sites :: [MSite]
+  , strand :: {-# UNPACK #-} !Int
+  , miRNALen :: {-# UNPACK #-} !Int
+  , mRNALen :: {-# UNPACK #-} !Int    
   } deriving (Show)
+
+data MSite = MSite
+  { _mScore :: MScore 
+  , _miRNARange :: Pair
+  , _mRNARange :: Pair
+  , _alignLen :: {-# UNPACK #-} !Int
+  , _match :: Match
+  , _seedType :: SeedType
+  , _align :: Align
+  } deriving (Show,Eq)
 
 data Latin = Latin
   { genus :: ByteString
@@ -50,32 +88,16 @@ data Setting = Setting
   , scalingParameter :: {-# UNPACK #-} !Double
   } deriving (Show,Eq)
 
-data Stat = Stat
-  { totalScore :: {-# UNPACK #-} !Double
-  , totalEnergy :: {-# UNPACK #-} !Double
-  , maxScore :: {-# UNPACK #-} !Double
-  , maxEnergy :: {-# UNPACK #-} !Double
-  , strand :: {-# UNPACK #-} !Int
-  , miRNALen :: {-# UNPACK #-} !Int
-  , mRNALen :: {-# UNPACK #-} !Int
-  , positions :: [Int]
-  } deriving (Show,Eq)
-             
 data Pair = P
   { beg :: {-# UNPACK #-} !Int -- begin at 0
   , end :: {-# UNPACK #-} !Int -- not include end
   } deriving (Show,Eq)
-            
-data Site = Site
-  { score :: {-# UNPACK #-} !Double
-  , energy :: {-# UNPACK #-} !Double
-  , miRNARange :: Pair
-  , mRNARange :: Pair
-  , alignLen :: {-# UNPACK #-} !Int
-  , match :: Match
-  , seedType :: SeedType
-  , align :: Align
-  } deriving (Show,Eq)
+
+data MScore = MScore
+  { structureScore :: {-# UNPACK #-} !Double
+  , freeEnergy :: {-# UNPACK #-} !Double
+  } deriving (Show,Eq,Ord)
+             
 
 data Match = Match
   { wasonClick :: {-# UNPACK #-} !Int
@@ -105,7 +127,7 @@ data SeedType = M8   -- ^ 8mer site
               deriving (Eq,Ord,Enum)
 
 data ContextScore = CS
-  {contextScore :: {-# UNPACK #-} !Double
+  {context :: {-# UNPACK #-} !Double
   ,pairingContrib :: {-# UNPACK #-} !Double
   ,localAUContrib :: {-# UNPACK #-} !Double
   ,positionContrib :: {-# UNPACK #-} !Double
@@ -113,7 +135,7 @@ data ContextScore = CS
   } deriving (Eq,Ord,Show)
 
 data ContextScorePlus = CSP
-  {contextScorePlus :: {-# UNPACK #-} !Double
+  {contextPlus :: {-# UNPACK #-} !Double
   ,pairingContribPlus :: {-# UNPACK #-} !Double
   ,localAUContribPlus :: {-# UNPACK #-} !Double
   ,positionContribPlus :: {-# UNPACK #-} !Double
