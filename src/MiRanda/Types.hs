@@ -30,8 +30,7 @@ newtype SeqData = SD ByteString
                 deriving (Show,Eq)
                          
 data Record = Record
-  { para :: Setting
-  , miRNA :: ByteString
+  { miRNA :: ByteString
   , mRNA :: ByteString
   , sites :: [Site]
   , statistics :: Stat
@@ -56,7 +55,7 @@ data Stat = Stat
   , totalEnergy :: {-# UNPACK #-} !Double
   , maxScore :: {-# UNPACK #-} !Double
   , maxEnergy :: {-# UNPACK #-} !Double
-  , strand :: ByteString
+  , strand :: {-# UNPACK #-} !Int
   , miRNALen :: {-# UNPACK #-} !Int
   , mRNALen :: {-# UNPACK #-} !Int
   , positions :: [Int]
@@ -73,14 +72,14 @@ data Site = Site
   , miRNARange :: Pair
   , mRNARange :: Pair
   , alignLen :: {-# UNPACK #-} !Int
-  , identity :: Identity
+  , match :: Match
   , seedType :: SeedType
   , align :: Align
   } deriving (Show,Eq)
 
-data Identity = Id
-  { idPerfectMatch :: {-# UNPACK #-} !Double
-  , idIncludeGU :: {-# UNPACK #-} !Double
+data Match = Match
+  { wasonClick :: {-# UNPACK #-} !Int
+  , includeGU :: {-# UNPACK #-} !Int
   } deriving (Show,Eq)
 
 data Align = Align
