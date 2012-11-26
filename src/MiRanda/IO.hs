@@ -14,6 +14,7 @@
 
 module MiRanda.IO where
 
+import           Data.Attoparsec.ByteString.Lazy
 import qualified Data.ByteString.Char8 as B8
 import           Data.ByteString.Lazy (ByteString)
 import           Data.ByteString.Lazy.Builder
@@ -21,6 +22,25 @@ import           Data.ByteString.Lazy.Builder.ASCII
 import qualified Data.ByteString.Lazy.Char8 as L8
 import           Data.Char
 import           Data.Monoid
+import           MiRanda.Parser
+import           MiRanda.Types
+
+readRecords :: FilePath -> IO [Record]
+readRecords fp =
+  L8.readFile fp >>= f . parse parseRecords . preprocess
+  where
+    f (Done _ r) = return r
+    f e = error $ show e
+    
+preprocess :: ByteString -> ByteString
+preprocess = L8.intercalate "\n" . filter
+             (\l ->
+               L8.isPrefixOf "   " l ||
+               L8.isPrefixOf ">" l
+               ) .
+             dropWhile
+             (/= "Current Settings:") .
+             L8.lines . L8.filter (/= '\r')
 
 toUTRs :: ByteString -> [UTR]
 toUTRs = map
@@ -31,7 +51,7 @@ toUTRs = map
           ) . (L8.split '\t')) . L8.lines 
 
 toFastas :: [UTR] -> ByteString
-toFastas = intercalate '\n' .
+toFastas = toLazyByteString . intercalate '\n' .
            map (\utr ->
                  charUtf8 '>' <> byteString (geneSymbol utr) <>
                  charUtf8 '\t' <> intDec (taxonomyID utr) <>
@@ -52,3 +72,15 @@ toFastas = intercalate '\n' .
                            else byteString h <>
                                 charUtf8 '\n' <>
                                 splitEvery n t
+
+countGene :: ByteString -> Int
+countGene str = if L8.null str
+                then 0
+                else go 0 $ L8.findIndices (== '>') str
+  where
+    go acc [] = acc
+    go acc [i] = acc
+    go acc (i:j:is) =
+      if j - i == 1
+      then (acc+1) `seq` go (acc+1) (j:is)
+      else go acc (j:is)
