@@ -188,9 +188,8 @@ getContextScorePlus st seedWithN8 rawScore =
       fcS = fcMap ! fromEnum st
       csp = foldl1' (\a b -> (+) <$> a <*> b)
             [fcS,paS',auS',psS',spsS',taS']
-  in CSP <$> csp <*> paS' <*> auS' <*> psS' <*> taS' <*> spsS' <*>
-             fcS
-     
+  in CSP <$> csp <*> paS' <*> auS' <*> psS' <*>
+             taS' <*> spsS' <*> fcS
   where
     fun s (minV,maxV) (reg,mean) =
       let s' = (s - minV) / (maxV - minV)
