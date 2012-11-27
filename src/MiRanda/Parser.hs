@@ -13,14 +13,14 @@
 -----------------------------------------------------------------------------
 
 module MiRanda.Parser where
-import Prelude hiding (take)
-import Data.Attoparsec.ByteString.Char8
-import Data.Attoparsec.Combinator
-import Data.Char
+import           Control.Applicative
+import           Data.Attoparsec.ByteString.Char8
+import           Data.Attoparsec.Combinator
 import qualified Data.ByteString.Char8 as B8
-import MiRanda.Types
-import MiRanda.Util
-import Control.Applicative
+import           Data.Char
+import           MiRanda.Types
+import           MiRanda.Util
+import           Prelude hiding (take)
 
 parseSite :: Parser MSite
 parseSite = do
