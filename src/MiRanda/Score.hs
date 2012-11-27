@@ -75,7 +75,7 @@ getPairScore s (Align miR3' mR5' b) =
                   else 0
     scanScore idx score preScore@(maxScore,(miIdx,utrIdx))
       | idx < n   =
-        if B8.index bond idx == '|'
+        if B8.index bond idx /= ' '
         then if idxFor13 <= idx && idx <= idxFor16
              then let score' = score + 2*baseScore (B8.index bond idx)
                   in scanScore (idx+1) score' preScore
