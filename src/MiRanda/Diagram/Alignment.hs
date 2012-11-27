@@ -12,6 +12,9 @@
 --
 -----------------------------------------------------------------------------
 module MiRanda.Diagram.Alignment
+       (
+         plotMultiAlign
+       )
        where
 
 import           Data.ByteString (ByteString)
@@ -146,7 +149,6 @@ diff (P up dn) str1' str2' =
   in foldl1 (+) $ map dif $
      zipWith ((*) `on` cToI) (B8.unpack str1) (B8.unpack str2)
            
--- plotMultiAlign :: UTR -> [UTR] -> 
 plotMultiAlign seedRange siteRange utr utrs =
   let ns = (map (commonName .
                  (taxMap `at`) .
@@ -157,7 +159,7 @@ plotMultiAlign seedRange siteRange utr utrs =
       con   = last nameStrs
       utrs' = sortBy
               (compare `on`
-               ((diff siteRange (extractSeq utr)) . extractSeq)) $
+               ((diff (P siteBeg siteEnd) (extractSeq utr)) . extractSeq)) $
               utrs
       seqStr = extractSeq utr
       ss = utr:utrs'
@@ -169,7 +171,7 @@ plotMultiAlign seedRange siteRange utr utrs =
           B8.unpack $ seqStr
       strLen = UV.maximum s
       seedBeg = fromJust $ UV.findIndex (== (1+beg seedRange)) s
-      seedEnd = fromJust $ UV.findIndex (== (1+end seedRange)) s
+      seedEnd = fromJust $ UV.findIndex (== (end seedRange)) s
       siteBeg = fromJust $ UV.findIndex (== (1+beg siteRange)) s
       siteEnd = fromJust $ UV.findIndex (== (1+end siteRange)) s
       siteLen = siteEnd - siteBeg
@@ -178,7 +180,7 @@ plotMultiAlign seedRange siteRange utr utrs =
                                e = floor $ (60 - fromIntegral siteLen) / 2
                            in if siteBeg - b < 0
                               then (0,60)
-                              else if siteEnd + e > strLen
+                              else if siteEnd + e > UV.length s
                                 then (strLen - 60, strLen)
                                 else (siteBeg - b, siteEnd + e)
                       else (siteBeg, siteEnd)
@@ -264,7 +266,7 @@ plotMultiAlign seedRange siteRange utr utrs =
                     # lcA transparent
                   ) names) ===
             (text con # font serifFont <>
-             rect (fromIntegral nameLen * coef) ( 0.5 + 4 * h)
+             rect (fromIntegral nameLen * coef) ( 0.75 + 2 * h)
              # lcA transparent
             )
       rhs = vcat (map
@@ -272,7 +274,7 @@ plotMultiAlign seedRange siteRange utr utrs =
                     text r # font serifFont <>
                     rect (fromIntegral rLen * coef) 1
                     # lcA transparent
-                  ) rs) === strutY (0.5 + 4 * h)
+                  ) rs) === strutY (0.75 + 2 * h)
   in pad 1.05 $ (lhs # alignB ||| dM # alignB ||| rhs # alignB) # centerXY
    
   where 
@@ -307,7 +309,7 @@ plotMultiAlign seedRange siteRange utr utrs =
             'T' -> (ch,t)
             'U' -> (ch,u)
             _ -> (ch,0)
-    plotOneChain _ _ = error "Impossible: plotOneChain"
+    plotOneChain a b = error $ show a ++ "\n\n\n" ++ show b
             
 extractStr (i,j) = B8.take (j-i) . B8.drop i
 exGS = (\(GS str) -> str)
