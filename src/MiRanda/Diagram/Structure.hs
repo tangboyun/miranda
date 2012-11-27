@@ -13,6 +13,9 @@
 -----------------------------------------------------------------------------
 
 module MiRanda.Diagram.Structure
+       (
+         renderBinding
+       )
        where
 
 import Diagrams.Prelude
@@ -151,6 +154,7 @@ renderBond ali@(Align miR3' utr5' b) =
 
 
 renderBinding s p ali =
+  pad 1.05 $
   renderUTR s ali p # centerX ===
   renderBond ali # centerX ===
   renderMiRNA ali # centerX

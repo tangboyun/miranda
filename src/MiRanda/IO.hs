@@ -30,12 +30,14 @@ import           Data.Time
 import           MiRanda.Parameter
 import           MiRanda.Parser
 import           MiRanda.Types
+import MiRanda.Util
 import           System.Directory
 import           System.FilePath
 import           System.IO
 import           System.Process
 import           MiRanda.Score
 
+import Debug.Trace
 
 mkProcess :: FilePath -> FilePath -> IO CreateProcess
 mkProcess miRFile utrFile = do
@@ -91,18 +93,21 @@ toRecord str mRs utrSets =
                st = _seedType mSite
                cS = getContextScore st rawS
                csP = getContextScorePlus st al rawS
+               sR = getSeedMatchSite mSite
                uR = _mRNARange mSite
                m = _match mSite
                al = _align mSite
-           in Site mS rawS cS csP uR m st al
+           in Site mS rawS cS csP sR uR m st al
          ) (sites mR)
       
     f mR utrSet =
       let utrID = _mRNA mR
           miID = _miRNA mR
-          ([u],us) = partition ((== orgToTaxID str) . taxonomyID) utrSet
-          ss = toSites mR u
-      in Record miID utrID u us ss
+          (lhs,rhs) = partition ((== orgToTaxID str) . taxonomyID) utrSet
+          ss = toSites mR (head lhs)
+      in if null lhs
+         then error $ (show mR ++ "\n\n" ++ show utrSet)
+         else Record miID utrID (head lhs) (rhs) ss
           
 
 readUTRs :: FilePath -> [B8.ByteString] -> IO [[UTR]]

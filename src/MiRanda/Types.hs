@@ -49,6 +49,7 @@ data Site = Site
   , rawScore :: RawScore
   , contextScore :: Maybe ContextScore
   , contextScorePlus :: Maybe ContextScorePlus
+  , seedMatchRange :: Pair
   , utrRange :: Pair
   , match :: Match
   , seedType :: SeedType

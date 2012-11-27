@@ -65,11 +65,11 @@ getSeedType (Align miR3' mR5' b) =
                     UV.unsafeBackpermute bond $
                     UV.tail $ UV.tail $ idxV
   in if noGap && allMatch2_8
-     then if site `at` UV.head idxV == 'A' -- if site 1 == A
+     then if toUpper (site `at` UV.head idxV) == 'A' -- if site 1 == A
           then M8 -- 8mer
           else M7M8 -- 7mer-m8
      else if noGap && allMatch2_7 -- if 2~7 mer all match
-          then if site `at` UV.head idxV == 'A' -- if site 1 == A
+          then if toUpper (site `at` UV.head idxV) == 'A' -- if site 1 == A
                then M7A1 -- 7mer-A1
                else M6 -- 6mer
           else if noGap && allMatch3_8
