@@ -65,17 +65,17 @@ getPairScore s (Align miR3' mR5' b) =
     idxFor13 = idxV `at` 12
     idxFor16 = idxV `at` 15
     bond = B8.reverse b
-    -- baseScore c = if c == '|'
+    -- baseScore c = if c == '|'  
     --               then 0.5
     --               else if c == ':'
     --                    then 0.25
     --                    else 0
-    baseScore c = if c == '|'
+    baseScore c = if c == '|' -- use same scoring schme as targetscan 6.2
                   then 0.5
                   else 0
     scanScore idx score preScore@(maxScore,(miIdx,utrIdx))
       | idx < n   =
-        if B8.index bond idx /= ' '
+        if B8.index bond idx /= ' ' -- here, targetscan 6.2 seems not stop at GU
         then if idxFor13 <= idx && idx <= idxFor16
              then let score' = score + 2*baseScore (B8.index bond idx)
                   in scanScore (idx+1) score' preScore
