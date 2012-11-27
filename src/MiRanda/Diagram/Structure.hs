@@ -132,7 +132,7 @@ renderUTR s ali@(Align miR3' utr5' b) (P up dn) =
                M8 -> (charC red $ head rhs) # alignB
                M7A1 -> (charC red $ head rhs) # alignB
                _    -> string rhs # alignB
-      str1 = string (printf "%6d  " up) # alignR ===
+      str1 = string (printf "%6d  " (up+1)) # alignR ===
              string "5'-" # alignR
       str2 = string (printf " %-6d  " dn) # alignL ===
              string "-3' UTR  " # alignL
