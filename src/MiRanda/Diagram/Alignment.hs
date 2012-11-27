@@ -324,7 +324,7 @@ calcRange (i,j) = (\s ->
                               B8.findIndices isAlpha str3
                           c = length $
                               B8.findIndices isAlpha str4
-                      in (a,b,a+b+c)
+                      in (a,a+b,a+b+c)
                     ) . extractSeq
 
 toRange (i,j) str =
