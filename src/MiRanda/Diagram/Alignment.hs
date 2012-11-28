@@ -209,6 +209,8 @@ plotMultiAlign seedRange siteRange utr utrs =
                                        ,siteRE - siteRB
                                        ,(B8.length $ head strs)-siteRE]
                                        seqStas
+      maxH = 4 * h * maximum $
+             map (\(a,c,g,t,u) -> maximum [a,c,g,t,u]) seqStas
       seqStas = map
                  (\i ->
                    let vec = UV.fromList $
@@ -257,7 +259,7 @@ plotMultiAlign seedRange siteRange utr utrs =
               printf "%d ~ %d : %d" a b c :: String
             ) . calcRange (exBeg,exEnd)) ss
       rLen = maximum $ map length rs            
-      dM = vcat $ fstLine : (tailLs ++ [strutY 0.5 ===charStas])
+      dM = vcat $ fstLine : (tailLs ++ [strutY 0.5 === charStas])
       coef = 0.5
       lhs = vcat (map
                   (\nm ->
@@ -266,7 +268,7 @@ plotMultiAlign seedRange siteRange utr utrs =
                     # lcA transparent
                   ) names) ===
             (text con # font serifFont <>
-             rect (fromIntegral nameLen * coef) ( 0.75 + 2 * h)
+             rect (fromIntegral nameLen * coef) (0.5 + maxH)
              # lcA transparent
             )
       rhs = vcat (map
@@ -274,7 +276,7 @@ plotMultiAlign seedRange siteRange utr utrs =
                     text r # font serifFont <>
                     rect (fromIntegral rLen * coef) 1
                     # lcA transparent
-                  ) rs) === strutY (0.75 + 2 * h)
+                  ) rs) === strutY (0.5 + maxH)
   in pad 1.05 $ (lhs # alignB ||| dM # alignB ||| rhs # alignB) # centerXY
    
   where 
