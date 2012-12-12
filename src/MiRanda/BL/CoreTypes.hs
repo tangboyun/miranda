@@ -15,14 +15,12 @@ module Bio.Phylogeny.PhyBin.CoreTypes
          -- Utilities specific to StandardDecor:
          avg_branchlen, get_bootstraps,
          
-         PhyBinConfig(..), default_phybin_config,
 
          toLabel, fromLabel, Label,
        )
        where
 
 import Data.Maybe (maybeToList)
-import Text.PrettyPrint.HughesPJClass hiding (char, Style)
 
 ----------------------------------------------------------------------------------------------------
 -- Type definitions
@@ -52,46 +50,14 @@ instance Functor NewickTree where
    fmap fn (NTInterior dec ls) = NTInterior (fn dec) (map (fmap fn) ls)
 
 
-instance Pretty dec => Pretty (NewickTree dec) where 
- -- pPrint (NTLeaf _ name)   = text (fromLabel name)
- -- pPrint (NTInterior _ ls) = 
- --     --parens$ commasep ls
- --     (parens$ sep$ map_but_last (<>text",") $ map pPrint ls)
-
- -- I'm using displayDefaultTree for the "prettiest" printing and
- -- replacing pPrint with a whitespace-improved version of show:
- pPrint (NTLeaf dec name)   = "NTLeaf"     <+> pPrint dec <+> text (fromLabel name)
- pPrint (NTInterior dec ls) = "NTInterior" <+> pPrint dec <+> pPrint ls
-
-
--- | Display a tree WITH the bootstrap and branch lengths.
-displayDefaultTree :: NewickTree DefDecor -> Doc
-displayDefaultTree (NTLeaf (Nothing,_) name)   = text (fromLabel name)
-displayDefaultTree (NTLeaf _ _ ) = error "WEIRD -- why did a leaf node have a bootstrap value?"
-displayDefaultTree (NTInterior (bootstrap,_) ls) = 
-   case bootstrap of
-     Nothing -> base
-     Just val -> base <> text ":[" <> text (show val) <> text "]"
- where
-   base = parens$ sep$ map_but_last (<>text",") $ map displayDefaultTree ls
-
 
 ----------------------------------------------------------------------------------------------------
 -- Labels
 ----------------------------------------------------------------------------------------------------
 
 
--- Experimental: toggle this to change the representation of labels:
--- Alas I always have problems with the interned string libs (e.g. segfaults)... [2012.11.20]
-----------------------------------------
-#if 0
-type Label = Atom; (toLabel, fromLabel) = (toAtom, fromAtom)
-#else
-type Label = String; (toLabel, fromLabel) = (id, id)
-#endif
-----------------------------------------
-fromLabel :: Label -> String
-toLabel   :: String -> Label
+type Label = String
+
 
 ----------------------------------------------------------------------------------------------------
 -- Tree metadata (decorators)
@@ -124,40 +90,7 @@ data StandardDecor = StandardDecor {
  }
  deriving (Show,Read,Eq,Ord)
 
-instance Pretty StandardDecor where 
- pPrint (StandardDecor bl bs wt ls) = parens$
-    "StandardDecor" <+> hsep [pPrint bl, pPrint bs
---                             , pPrint wt, pPrint ls
-                             ]
 
-----------------------------------------------------------------------------------------------------
--- * Configuring and running the command line tool.
-----------------------------------------------------------------------------------------------------
-
--- | Due to the number of configuration options for the driver, we pack them into a record.
-data PhyBinConfig = 
-  PBC { verbose :: Bool
-      , num_taxa :: Int
-      , name_hack :: Label -> Label
-      , output_dir :: String
-      , inputs :: [String]
-      , do_graph :: Bool
-      , do_draw :: Bool        
-      , branch_collapse_thresh :: Maybe Double -- ^ Branches less than this length are collapsed.
-      }
-
--- | The default phybin configuration.
-default_phybin_config :: PhyBinConfig
-default_phybin_config = 
- PBC { verbose = False
-      , num_taxa = error "must be able to determine the number of taxa expected in the dataset.  (Supply it manually.)"
-      , name_hack = id -- Default, no transformation of leaf-labels
-      , output_dir = "./"
-      , inputs = []
-      , do_graph = False
-      , do_draw = False
-      , branch_collapse_thresh = Nothing
-     }
 
 ----------------------------------------------------------------------------------------------------
 -- * Simple utility functions for the core types:
