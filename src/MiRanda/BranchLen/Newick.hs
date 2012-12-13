@@ -2,13 +2,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- Borrowed from the phybin <http://hackage.haskell.org/package/phybin> package
-module MiRanda.BL.Newick
+module MiRanda.BranchLen.Newick
        where
 
 import           Control.Applicative
 import           Data.Attoparsec.ByteString.Char8 hiding (isDigit)
 import qualified Data.ByteString.Char8 as B8
-import           Data.Char          (isSpace,isAlpha,isDigit)
+import           Data.Char          (isAlpha,isDigit)
 import           Data.Maybe (maybeToList)
 
 type BranchLen = Double
@@ -153,7 +153,7 @@ foldIsomorphicTrees fn ls@(hd:_) = fmap fn horiztrees
 -- | Parse a bytestring into a NewickTree with branch lengths.
 parseNewick :: B8.ByteString -> NewickTree DefDecor
 parseNewick input = 
-  case flip feed "" $ parse newick_parser (B.filter (not . isSpace) input) of
+  case flip feed "" $ parse newick_parser (B8.filter (not . isSpace) input) of
     Done _ r -> r
     _ -> error "Error : parseNewick"
 
@@ -178,24 +178,24 @@ defaultMeta :: (Maybe Int, Double)
 defaultMeta = (Nothing,0.0)
 
 leaf :: Parser (NewickTree DefDecor)
-leaf = NTLeaf <$> defaultMeta <*> name
+leaf = NTLeaf <$> pure defaultMeta <*> name
 
 internal :: Parser (NewickTree DefDecor)
-internal = NTInterior <$> defaultMeta <*>
-           char '(' *> brachset <* char ')' <* name
+internal = NTInterior <$> pure defaultMeta <*>
+           (char '(' *> branchset <* char ')' <* name)
 
 branchset :: Parser [NewickTree DefDecor]
 branchset = (:) <$> (branch <?> "at least one branch") <*>
             option [] (char ',' *> branchset)
 
 branch :: Parser (NewickTree DefDecor)
-branch = tag <$> subtree <*> branchMetadat
+branch = flip tag <$> subtree <*> branchMetadat
 
 -- If the length is omitted, it is implicitly zero.
 branchMetadat :: Parser DefDecor
 branchMetadat = option defaultMeta $ 
-                (,) <$> char ':' *> double <*>
-                option Nothing (Just <$> char '[' *> decimal <* char ']')
+                flip (,) <$> (char ':' *> double) <*>
+                optional  (char '[' *> decimal <* char ']')
 
 name :: Parser String
 name = option "" $ many1 $
