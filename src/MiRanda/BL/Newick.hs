@@ -1,73 +1,37 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
-{-# OPTIONS_GHC -fwarn-unused-imports #-}
 
 -- Borrowed from the phybin <http://hackage.haskell.org/package/phybin> package
-module Bio.Phylogeny.PhyBin.CoreTypes
-       (
-         NewickTree(..), displayDefaultTree,
-         DefDecor, StandardDecor(..), treeSize, numLeaves,
-         get_dec, set_dec, get_children, 
-         map_labels, all_labels, foldIsomorphicTrees,
-
-         -- Utilities specific to StandardDecor:
-         avg_branchlen, get_bootstraps,
-         
-
-         toLabel, fromLabel, Label,
-       )
+module MiRanda.BL.Newick
        where
 
-import Data.Maybe (maybeToList)
-
-----------------------------------------------------------------------------------------------------
--- Type definitions
-----------------------------------------------------------------------------------------------------
+import           Control.Applicative
+import           Data.Attoparsec.ByteString.Char8 hiding (isDigit)
+import qualified Data.ByteString.Char8 as B8
+import           Data.Char          (isSpace,isAlpha,isDigit)
+import           Data.Maybe (maybeToList)
 
 type BranchLen = Double
 
 -- | Even though the Newick format allows it, here we ignore interior node
 --   labels. (They are not commonly used.)
-data NewickTree a = 
-   NTLeaf     a Label
- | NTInterior a [NewickTree a]
- deriving (Show, Eq, Ord)
-
-{-
--- [2010.09.22] Disabling:
-instance NFData Atom where
-  rnf a = rnf (fromAtom a :: Int)
-
-instance NFData a => NFData (NewickTree a) where
-  rnf (NTLeaf l n)      = rnf (l,n)
-  rnf (NTInterior l ls) = rnf (l,ls)
--}
+data NewickTree a = NTLeaf     a Label
+                  | NTInterior a [NewickTree a]
+                  deriving (Show, Eq, Ord)
 
 instance Functor NewickTree where 
    fmap fn (NTLeaf dec x)      = NTLeaf (fn dec) x 
    fmap fn (NTInterior dec ls) = NTInterior (fn dec) (map (fmap fn) ls)
 
-
-
-----------------------------------------------------------------------------------------------------
--- Labels
-----------------------------------------------------------------------------------------------------
-
-
 type Label = String
-
 
 ----------------------------------------------------------------------------------------------------
 -- Tree metadata (decorators)
 ----------------------------------------------------------------------------------------------------
 
-
 -- | The default decorator for NewickTrees contains BOOTSTRAP and BRANCHLENGTH.
 --   The bootstrap values, if present, will range in [0..100]
 type DefDecor = (Maybe Int, BranchLen)
-
 
 -- | The standard decoration includes everything in `DefDecor` plus
 --   some extra cached data:
@@ -81,7 +45,6 @@ type DefDecor = (Maybe Int, BranchLen)
 data StandardDecor = StandardDecor {
   branchLen     :: BranchLen,
   bootStrap     :: Maybe Int,
-
   -- The rest of these are used by the computations below.  These are
   -- cached (memoized) values that could be recomputed:
   ----------------------------------------
@@ -181,4 +144,63 @@ foldIsomorphicTrees fn ls@(hd:_) = fmap fn horiztrees
     (NTInterior dec ls1, NTInterior decls ls2) ->
      NTInterior (dec:decls) $ zipWith consTrees ls1 ls2
     _ -> error "foldIsomorphicTrees: difference in tree shapes"
+
+
+----------------------------------------------------------------------------------------------------
+-- * Parser for newick tree :
+----------------------------------------------------------------------------------------------------
+
+-- | Parse a bytestring into a NewickTree with branch lengths.
+parseNewick :: B8.ByteString -> NewickTree DefDecor
+parseNewick input = 
+  case flip feed "" $ parse newick_parser (B.filter (not . isSpace) input) of
+    Done _ r -> r
+    _ -> error "Error : parseNewick"
+
+----------------------------------------------------------------------------------------------------
+-- Newick file format parser definitions:
+----------------------------------------------------------------------------------------------------
+
+tag :: a -> NewickTree a -> NewickTree a
+tag l s =
+  case s of 
+    NTLeaf _ n      -> NTLeaf l n
+    NTInterior _ ls -> NTInterior l ls
+
+-- | This parser ASSUMES that whitespace has been prefiltered from the input.
+newick_parser :: Parser (NewickTree DefDecor)
+newick_parser = flip tag <$> subtree <*> branchMetadat <* char ';'
+
+subtree :: Parser (NewickTree DefDecor)
+subtree = internal <|> leaf
+
+defaultMeta :: (Maybe Int, Double)
+defaultMeta = (Nothing,0.0)
+
+leaf :: Parser (NewickTree DefDecor)
+leaf = NTLeaf <$> defaultMeta <*> name
+
+internal :: Parser (NewickTree DefDecor)
+internal = NTInterior <$> defaultMeta <*>
+           char '(' *> brachset <* char ')' <* name
+
+branchset :: Parser [NewickTree DefDecor]
+branchset = (:) <$> (branch <?> "at least one branch") <*>
+            option [] (char ',' *> branchset)
+
+branch :: Parser (NewickTree DefDecor)
+branch = tag <$> subtree <*> branchMetadat
+
+-- If the length is omitted, it is implicitly zero.
+branchMetadat :: Parser DefDecor
+branchMetadat = option defaultMeta $ 
+                (,) <$> char ':' *> double <*>
+                option Nothing (Just <$> char '[' *> decimal <* char ']')
+
+name :: Parser String
+name = option "" $ many1 $
+       satisfy (\c ->
+                 isAlpha c || isDigit c ||
+                 c == '.' || c == '_' ||
+                 c == '-')
 
