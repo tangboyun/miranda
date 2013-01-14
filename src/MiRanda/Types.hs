@@ -39,8 +39,8 @@ newtype SeqData = SD
 data Record = Record
   {miRNA :: ByteString
   ,gene :: ByteString
-  ,utr :: UTR
-  ,homoUTRs :: [UTR]
+  ,utr :: UTR -- ref utr
+  ,homoUTRs :: [UTR] -- utrs except for ref utr
   ,predictedSites :: [Site]
   } deriving (Show,Eq)
 

@@ -17,7 +17,9 @@ type BranchLen = Double
 --   labels. (They are not commonly used.)
 data NewickTree a = NTLeaf     a Label
                   | NTInterior a [NewickTree a]
-                  deriving (Show, Eq, Ord)
+                  deriving (Show, Eq)
+
+
 
 instance Functor NewickTree where 
    fmap fn (NTLeaf dec x)      = NTLeaf (fn dec) x 
@@ -118,7 +120,7 @@ map_labels fn (NTInterior dec ls)  = NTInterior dec$ map (map_labels fn) ls
 -- | Return all the labels contained in the tree.
 all_labels :: NewickTree t -> [Label]
 all_labels (NTLeaf     _ lbl) = [lbl]
-all_labels (NTInterior _ ls)  = concat$ map all_labels ls
+all_labels (NTInterior _ ls)  = concat $ map all_labels ls
 
 
 
