@@ -23,6 +23,7 @@ import           MiRanda.Types
 
 
 isLeaf :: NewickTree a -> Bool
+{-# INLINE isLeaf #-}
 isLeaf (NTLeaf _ _) = True
 isLeaf _ = False
 
@@ -46,7 +47,10 @@ calcBranchLength ls = go ls $ parseNewick treePara
                                         then (acc'+d',delete l rs)
                                         else ac
                                       ) (0,as) leafs 
-                in d + ld + foldl' (+) 0 (map (go as') subts)
+                in if null as'
+                   then d + ld
+                   else d + ld +
+                        foldl' (+) 0 (map (go as') subts)
 
 toBranchLength :: [(UTR,[UTR])] -> [(Double,Int)]
 toBranchLength = go H.empty
