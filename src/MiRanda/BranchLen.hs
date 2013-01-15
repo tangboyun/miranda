@@ -57,8 +57,9 @@ calcBranchLength = flip go
                    else d + ld +
                         foldl' (+) 0 (map (go as') subts)
 
-toBranchLength :: [(UTR,[UTR])] -> [(Double,Int)]
-toBranchLength = go H.empty
+-- | utr branch length and bin idx
+toBranchLength :: [Record] -> [(Double,Int)]
+toBranchLength records = go H.empty . map ( utr &&& homoUTRs) $ records
   where
     myMedian _ [] = 0
     myMedian l xs | odd l = xs !! ((l-1) `quot` 2)
@@ -92,6 +93,6 @@ toBranchLength = go H.empty
                       ) ([],h) is
             m = myMedian n $ sort bs
             i = if m == 0
-                then 1
-                else length $ takeWhile (< m) branchLenThresholds
+                then 0
+                else (length $ takeWhile (< m) branchLenThresholds) - 1
         in (m,i) : go h' rs

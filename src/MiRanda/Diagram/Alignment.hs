@@ -32,6 +32,7 @@ import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
 import           Diagrams.Prelude hiding (diff,beg,end,trace)
 import           MiRanda.Parameter
+import           MiRanda.Util
 import           MiRanda.Types
 import           Text.Printf
 
@@ -195,7 +196,7 @@ plotMultiAlign seedRange siteRange utr utrs =
                    ,siteRE - seedRE
                    ,exEnd - siteRE]
       chss = map (toFivePart . B8.unpack) strs
-      strs = map (extractStr (exBeg,exEnd) . exGS . alignment) ss
+      strs = map (extractStr (exBeg,exEnd) . unGS . alignment) ss
       sites = map (extractStr (siteRB,siteRE)) strs
       siteStas = splitPlacesBlanks
                  [seedRB - siteRB
@@ -313,9 +314,6 @@ plotMultiAlign seedRange siteRange utr utrs =
             _ -> (ch,0)
     plotOneChain a b = error $ show a ++ "\n\n\n" ++ show b
             
-extractStr (i,j) = B8.take (j-i) . B8.drop i
-exGS = (\(GS str) -> str)
-extractSeq = exGS . alignment
 
 calcRange (i,j) = (\s ->
                       let (str1,str2) = B8.splitAt i s

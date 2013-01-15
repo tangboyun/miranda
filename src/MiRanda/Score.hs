@@ -12,18 +12,101 @@
 -----------------------------------------------------------------------------
 module MiRanda.Score where
 
-import MiRanda.Types
-import qualified Data.IntMap.Strict as IM
-import Control.Applicative
-import Data.List
-import qualified Data.Vector.Unboxed as UV
-import Data.ByteString (ByteString)
+import           Control.Applicative
+import           Control.Arrow
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as B8
-import Data.Char
-import Data.List
-import MiRanda.Parameter.FSPPara
-import MiRanda.Parameter
-import MiRanda.Util
+import           Data.Char
+import qualified Data.HashMap.Strict as H
+import qualified Data.IntMap.Strict as IM
+import           Data.List
+import           Data.List
+import qualified Data.Vector as V
+import qualified Data.Vector.Unboxed as UV
+import           MiRanda.BranchLen.Newick
+import           MiRanda.Parameter
+import           MiRanda.Parameter.BL
+import           MiRanda.Parameter.FSPPara
+import           MiRanda.Parameter.PCT
+import           MiRanda.Types
+import           MiRanda.Util
+
+
+atV :: V.Vector a -> Int -> a
+atV = (V.!)
+
+calcPct :: Double -> (Double,Double,Double,Double) -> Double
+calcPct bl (b0,b1,b2,b3) = max 0 $! b0 + b1 / ( 1 + exp (negate b2 * bl + b3)) 
+    
+
+binTreeVec :: V.Vector (NewickTree DefDecor)
+binTreeVec = V.fromList $
+             map parseNewick
+             [treeBin1
+             ,treeBin2
+             ,treeBin3
+             ,treeBin4
+             ,treeBin5
+             ,treeBin6
+             ,treeBin7
+             ,treeBin8
+             ,treeBin9
+             ,treeBin10]
+
+checkConservation :: SeedType -> Double -> Bool
+checkConservation st bl =
+    case st of
+        M8 -> bl >= 0.8
+        M7M8 -> bl >= 1.3
+        M7A1 -> bl >= 1.6
+
+getConservations :: [Record] -> [[Conservation]]
+getConservations records = go $ zip records (toBranchLength records)
+  where
+    hashMapLookup st seedStr =
+        let h1 = H.fromList pct8mer
+            h2 = H.fromList pct7merm8
+            h3 = H.fromList pct7mer1a
+        in case st of
+            M8 -> H.lookup seedStr h1
+            M7M8 -> H.lookup seedStr h2
+            M7A1 -> H.lookup seedStr h3
+            _ -> Nothing
+    go [] = []
+    go ((r,(_,binIdx)):res) =
+        let thisUTR = utr r
+            thisID = show . taxonomyID $ thisUTR
+            otherUTRs = homoUTRs r
+            sites = predictedSites r
+        in map
+           (\s ->
+             let seed = extractSeedN8 . align $ s
+                 sT = seedType s
+                 tree = binTreeVec `atV` binIdx
+             in if sT /= M8
+                then let homoIDs = map show $ getSpeciesWithSameSeedN8Seq s thisUTR otherUTRs
+                         bl = if null homos
+                              then 0
+                              else calcBranchLength tree (thisID:homoIDs)
+                         isC = checkConservation sT bl
+                     in Con isC bl $ fmap (calcPct bl) $
+                        hashMapLookup sT seed
+                else let stSps = groupHomoSpWithSeedType s thisUTR otherUTRs
+                         bls = map (\(stype,ids) ->
+                                     let bl = if length ids == 1
+                                              then 0 -- note 吃不准应该包含 thisID 否
+                                              else calcBranchLength tree $ map show ids
+                                         isC = checkConservation stype bl
+                                     in (stype,bl,isC)
+                                   ) stSps
+                         (_,bl,isC) = foldl' (\ori e@(st,l,bool) ->
+                                               if bool
+                                               then e
+                                               else ori) (M6,0,False) bls
+                         
+                         
+           ) sites 
+
 
 (!) :: IM.IntMap a -> IM.Key -> a
 (!) = (IM.!)
@@ -209,5 +292,3 @@ getContextScorePlus st ali rawScore =
     fun s (minV,maxV) (reg,mean) =
       let s' = (s - minV) / (maxV - minV)
       in reg * (s' - mean)
-    extractSeedN8 (Align miR _ _) = B8.take 7 $
-                                    B8.drop 1 $ B8.reverse miR

@@ -20,6 +20,87 @@ import Data.Char
 import qualified Data.Vector.Unboxed as UV
 import Data.ByteString (ByteString)
 import Data.List
+import Control.Arrow
+import Data.Function
+import Data.Maybe
+
+getGapRangeFromTrueRange :: Pair -> UTR -> (Int,Int)
+getGapRangeFromTrueRange p utr =
+    let seqStr = extractSeq utr
+        charCount = UV.postscanl (+) 0 $ UV.fromList $
+                    map (\c ->
+                          if c == '-'
+                          then 0 :: Int
+                          else 1) $
+                    B8.unpack $ seqStr
+        rbeg = fromJust $ UV.findIndex (== (1+beg p)) charCount
+        rend = fromJust $ UV.findIndex (== (1+end p)) charCount
+    in (rbeg,rend)
+
+
+-- | 仅返回homos中的taxID
+getSpeciesWithSameSeedN8Seq :: Site -> UTR -> [UTR] -> [Int]
+getSpeciesWithSameSeedN8Seq s utr homos =
+    let siteRange = utrRange s
+        seqStr = extractSeq utr
+        sPair = getGapRangeFromTrueRange siteRange utr
+        seed = extractStr sPair seqStr
+    in map snd $ filter ((== seed) . fst) $
+       map ((extractStr sPair . extractSeq) &&& taxonomyID) homos
+       
+-- | [Int] 包含source sp taxID
+groupHomoSpWithSeedType :: Site -> UTR -> [UTR] -> [(SeedType,[Int])]
+groupHomoSpWithSeedType s utr homos =
+    let siteRange = utrRange s
+        sPair = getGapRangeFromTrueRange siteRange utr
+        miRStr = tToU . miRNASite3' . align $ s
+    in filter
+       ((\st ->
+          st == M8 ||
+          st == M7M8 ||
+          st == M7A1) . fst) $
+        map ((fst . head) &&& (map snd)) $
+        groupBy ((==) `on` fst) $
+        sortBy (compare `on` fst) $
+        map
+        (\(siteStr,taxID) ->
+          let b = B8.pack $
+                  B8.zipWith
+                  (\a b ->
+                    if (a == 'A' && b == 'U') ||
+                       (b == 'U' && a == 'A') ||
+                       (a == 'G' && b == 'C') ||
+                       (a == 'C' && b == 'G')
+                    then '|'
+                    else if (a == 'G' && b == 'U') ||
+                            (a == 'U' && b == 'G')
+                         then ':'
+                         else ' ') miRStr siteStr
+              seedT = getSeedType $ Align miRStr siteStr b
+          in (seedT,taxID)) $
+        map ((tToU . extractStr sPair . extractSeq) &&& taxonomyID) $ utr:homos
+
+        
+tToU :: ByteString -> ByteString
+tToU = B8.map ((\c -> if c == 'T'
+                      then 'U'
+                      else c) . toUpper)
+        
+extractStr :: (Int,Int) -> ByteString -> ByteString
+extractStr (i,j) = B8.take (j-i) . B8.drop i
+
+extractSeq :: UTR -> ByteString
+extractSeq = unGS . alignment
+
+extractSeedN8FromBS :: ByteString -> ByteString 
+extractSeedN8FromBS miR =
+    let mi = B8.reverse miR
+    in B8.pack $ map (B8.index mi) $
+       take 7 $ drop 1 $ B8.findIndices isAlpha mi
+
+extractSeedN8 :: Align -> ByteString
+extractSeedN8 (Align miR _ _) = extractSeedN8FromBS miR
+
 
 seedToIdx :: ByteString -> (UV.Vector Int,Int)
 seedToIdx miR3' =

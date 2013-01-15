@@ -37,7 +37,6 @@ import           System.IO
 import           System.Process
 import           MiRanda.Score
 
-import Debug.Trace
 
 mkProcess :: FilePath -> FilePath -> IO CreateProcess
 mkProcess miRFile utrFile = do

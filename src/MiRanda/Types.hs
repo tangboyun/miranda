@@ -17,6 +17,12 @@ module MiRanda.Types where
 import Data.ByteString (ByteString)
 import Data.Vector.Unboxed
 
+data Conservation = Con
+  { isConserved :: {-# UNPACK #-} !Bool
+  , branchLength :: {-# UNPACK #-} !Double
+  , pct :: {-# UNPACK #-} !(Maybe Double)}
+
+
 data Fasta = Fasta
   { seqlabel :: ByteString
   , seqdata :: SeqData
