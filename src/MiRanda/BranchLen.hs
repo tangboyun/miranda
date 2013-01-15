@@ -27,8 +27,13 @@ isLeaf :: NewickTree a -> Bool
 isLeaf (NTLeaf _ _) = True
 isLeaf _ = False
 
-calcBranchLength :: [Label] -> Double
-calcBranchLength ls = go ls $ parseNewick treePara
+
+newick :: NewickTree DefDecor
+newick = parseNewick treePara
+
+
+calcBranchLength :: NewickTree DefDecor -> [Label] -> Double
+calcBranchLength = flip go
   where
     go :: [Label] -> NewickTree DefDecor -> Double
     go [] _ = 0
@@ -80,7 +85,7 @@ toBranchLength = go H.empty
                            then (0:acc,ha)
                            else case H.lookup cs ha of
                                Nothing ->
-                                   let v = calcBranchLength (refID:cs)
+                                   let v = calcBranchLength newick (refID:cs)
                                        ha' = H.insert cs v ha
                                    in (v:acc,ha')
                                Just v -> (v:acc,ha)
