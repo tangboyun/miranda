@@ -41,9 +41,9 @@ getGapRangeFromTrueRange p utr =
 -- | 仅返回homos中的taxID
 getSpeciesWithSameSeedN8Seq :: Site -> UTR -> [UTR] -> [Int]
 getSpeciesWithSameSeedN8Seq s utr homos =
-    let siteRange = utrRange s
+    let seedR = seedMatchRange s
         seqStr = extractSeq utr
-        sPair = getGapRangeFromTrueRange siteRange utr
+        sPair = getGapRangeFromTrueRange seedR utr
         seed = extractStr sPair seqStr
     in map snd $ filter ((== seed) . fst) $
        map ((extractStr sPair . extractSeq) &&& taxonomyID) homos
@@ -157,7 +157,7 @@ getSeedType (Align miR3' mR5' b) =
                then M6O
                else Imperfect
 
-
+-- | May have problem
 getSeedMatchSite :: MSite -> Pair
 getSeedMatchSite site =
   let P _ down = _mRNARange site
