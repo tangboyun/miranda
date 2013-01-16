@@ -46,7 +46,7 @@ parseSite = do
   al <- decimal <* char '\t'
   wcRatio <- fmap (* 0.01) $ double <* char '%' <* char '\t'
   guRatio <- fmap (* 0.01) $ double <* char '%' <* char '\n'
-  let miRang = P (miR1 - 1) miR2
+  let miRang = P (miR1 - 1) miR2 -- 1 base, inclusive range
       utrRang = P (utrR1 - 1) utrR2
       m = Match (round $ fromIntegral al * wcRatio)
           (round $ fromIntegral al * guRatio)

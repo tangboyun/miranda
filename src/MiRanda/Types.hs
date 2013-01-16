@@ -17,11 +17,33 @@ module MiRanda.Types where
 import Data.ByteString (ByteString)
 import Data.Vector.Unboxed
 
-data Conservation = Con
-  { isConserved :: {-# UNPACK #-} !Bool
-  , branchLength :: {-# UNPACK #-} !Double
-  , pct :: {-# UNPACK #-} !(Maybe Double)}
 
+data SiteLine = SL
+  { miRID :: ByteString
+  , geneID :: Gene
+  , conserve_Score :: Conservation
+  , raw_Score :: RawScore
+  , context_Score :: Maybe ContextScore
+  , context_Score_Plus :: Maybe ContextScorePlus
+  , seedRange :: Pair
+  , siteRange :: Pair
+  , seed :: SeedType
+  , alignStructure :: Align
+  } deriving (Show,Eq)
+
+newtype Inclusive = Inclusive (Int,Int)
+                    deriving (Show,Eq)
+data Gene = Gene 
+  {syb :: ByteString
+  ,ref :: ByteString
+  } deriving (Show,Eq)
+      
+data Conservation = Con
+  { isConserved :: !Bool
+  , branchLength :: {-# UNPACK #-} !Double
+  , pct :: !(Maybe Double)
+  } deriving (Show,Eq)
+  
 
 data Fasta = Fasta
   { seqlabel :: ByteString
@@ -30,6 +52,7 @@ data Fasta = Fasta
 
 data UTR = UTR
   {geneSymbol :: ByteString
+  ,refSeqID :: ByteString
   ,taxonomyID :: Int
   ,alignment :: GapSeq
   } deriving (Show,Eq)
@@ -44,7 +67,7 @@ newtype SeqData = SD
 
 data Record = Record
   {miRNA :: ByteString
-  ,gene :: ByteString
+  ,gene :: ByteString -- refSeqID
   ,utr :: UTR -- ref utr
   ,homoUTRs :: [UTR] -- utrs except for ref utr
   ,predictedSites :: [Site]
@@ -64,7 +87,7 @@ data Site = Site
    
 data MRecord = MRecord
   { _miRNA :: ByteString
-  , _mRNA :: ByteString
+  , _mRNA :: ByteString -- refSeqID
   , sites :: [MSite]
   , strand :: {-# UNPACK #-} !Int
   , miRNALen :: {-# UNPACK #-} !Int

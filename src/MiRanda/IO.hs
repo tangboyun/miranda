@@ -36,7 +36,61 @@ import           System.FilePath
 import           System.IO
 import           System.Process
 import           MiRanda.Score
+import           Debug.Trace
+import           Control.Arrow
+import           Text.Printf
 
+-- | for debug 
+toTargetScanOutFormat :: [SiteLine] -> [B8.ByteString]
+toTargetScanOutFormat =
+    map 
+    (\sl ->
+      let csp = context_Score_Plus sl
+          toBS :: Show a => a -> B8.ByteString
+          toBS = B8.pack . show
+          toBS' = B8.pack . myShow
+          myShow e = case e of
+              Nothing -> ""
+              Just e -> printf "%.3f" e
+          Con _ bl pct = conserve_Score sl
+      in miRID sl <> "\t" <>
+         syb (geneID sl) <> " " <> ref (geneID sl) <> "\t" <>
+         
+         (toBS $ (beg &&& end) $ seedRange sl) <> "\t" <>
+         (toBS $ seed sl) <> "\t" <>
+         (toBS' $ fmap siteTypeContribPlus csp) <> "\t" <>
+         (toBS' $ fmap pairingContribPlus csp) <> "\t" <>
+         (toBS' $ fmap localAUContribPlus csp) <> "\t" <>
+         (toBS' $ fmap positionContribPlus csp) <> "\t" <>
+         (toBS' $ fmap taContribPlus csp) <> "\t" <>
+         (toBS' $ fmap spsContribPlus csp) <> "\t" <>
+         (toBS' $ fmap contextPlus csp) <> "\t" <>
+         (toBS $ bl) <> "\t" <>
+         (toBS $ pct)
+    )
+    
+toSiteLines :: [Record] -> [SiteLine]
+toSiteLines rs = concatMap snd $ getSites $ zip rs (getConservations rs)
+
+getSites :: [(Record,[Conservation])] -> [(Record,[SiteLine])]
+getSites [] = []
+getSites ((r,cons):rs) =
+    let ss = predictedSites r
+        mi = miRNA r
+        u = utr r
+        g = Gene (geneSymbol u) (refSeqID u)
+        sls = map (\(con,s) ->
+                    let raw = rawScore s
+                        conS = contextScore s
+                        conSP = contextScorePlus s
+                        seedM = seedMatchRange s
+                        siteM = utrRange s
+                        st = seedType s
+                        al = align s
+                    in SL mi g con raw conS conSP seedM siteM st al
+                  ) $ zip cons ss
+    in (r,sls): getSites rs
+    
 
 mkProcess :: FilePath -> FilePath -> IO CreateProcess
 mkProcess miRFile utrFile = do
@@ -108,17 +162,16 @@ toRecord str mRs utrSets =
          then error $ (show mR ++ "\n\n" ++ show utrSet)
          else Record miID utrID (head lhs) (rhs) ss
           
-
 readUTRs :: FilePath -> [B8.ByteString] -> IO [[UTR]]
 readUTRs fp genes =
   L8.readFile fp >>=
   return . myFilter genes .
-  groupBy ((==) `on` geneSymbol) . toUTRs
+  groupBy ((==) `on` refSeqID) . toUTRs
   where
     myFilter _ [] = []
     myFilter [] _ = []
     myFilter ag@(g:gs) (us:uss) =
-      if geneSymbol (head us) == g
+      if refSeqID (head us) == g
       then us : myFilter gs uss
       else myFilter ag uss
            
@@ -140,16 +193,16 @@ preprocess = L8.intercalate "\n" . filter
 
 toUTRs :: ByteString -> [UTR]
 toUTRs = map
-         ((\(_:_:syb:tax:sdata:[]) ->
+         ((\(refId:_:syb:tax:sdata:[]) ->
             case L8.readInt tax of
-              Just (taxId,_) -> UTR (L8.toStrict syb) taxId (GS $ L8.toStrict sdata)
+              Just (taxId,_) -> UTR (L8.toStrict syb) (L8.toStrict refId) taxId (GS $ L8.toStrict sdata)
               _              -> error "Fail in parse UTR sequence."
           ) . (L8.split '\t')) . tail . L8.lines 
 
 toFastas :: [UTR] -> ByteString
 toFastas = toLazyByteString . intercalate '\n' .
            map (\utr ->
-                 charUtf8 '>' <> byteString (geneSymbol utr) <>
+                 charUtf8 '>' <> byteString (refSeqID utr) <>
                  charUtf8 '\n' <>
                  alignToSeq utr <>
                  charUtf8 '\n'

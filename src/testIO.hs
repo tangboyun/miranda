@@ -26,26 +26,38 @@ import MiRanda.Diagram.Alignment
 import MiRanda.Diagram.Structure
 import Diagrams.Prelude hiding (align)
 import Diagrams.Backend.Cairo.CmdLine
+import MiRanda.Score
+import Data.List
+
 spec = "Human"
-inF = "/home/tangboyun/miRNAPrediction/miRNA.fa"
-utrF = "/home/tangboyun/miRNAPrediction/UTR_Sequences.txt"
+inF = "/tmp/miRNA.fa"
+-- utrF = "/home/tangboyun/miRNAPrediction/UTR_Sequences.txt"
+
+geneIDs = ["LIN28B"]
+
+utrF' = "/tmp/testUTR.txt"
 
 main = do
- fa <- fmap head $ readFasta inF
- rs <- miRNAPredict spec fa utrF
- 
- writeFile "Summary for predicted targets.xml" $ showSpreadsheet $
-   mkTargetWorkbook (seqlabel fa) $ rs
+ -- str <- L8.readFile utrF
+ -- let ls = L8.lines $ L8.filter (/= '\r') str
+ --     str' = L8.intercalate "\n" $ head ls : filter ((`elem` geneIDs).(!! 2) . L8.split '\t') (tail ls)
+ -- L8.writeFile utrF' str'
+ fas <- readFasta inF
+ rs <- mapM (\fa -> miRNAPredict spec fa utrF') fas
 
- let r = head $ filter ((== "FAS") . gene) rs
-     s = head $ predictedSites r
-     al = align s
-     st = seedType s
-     p = (utrRange s)
-     d1 = plotMultiAlign (seedMatchRange s) p (utr r) (homoUTRs r)
-     d2 = renderBinding st p al
+ mapM_ (B8.putStrLn) $ toTargetScanOutFormat $ toSiteLines $ concat rs
+-- writeFile "Summary for predicted targets.xml" $ showSpreadsheet $
+ --   mkTargetWorkbook (seqlabel fa) $ rs
+
+ -- let r = head $ filter ((== "FAS") . gene) rs
+ --     s = head $ predictedSites r
+ --     al = align s
+ --     st = seedType s
+ --     p = (utrRange s)
+ --     d1 = plotMultiAlign (seedMatchRange s) p (utr r) (homoUTRs r)
+ --     d2 = renderBinding st p al
  -- utrs <- readUTRs utrF ["AGL"]
  -- print $ utrs
 -- fst $ renderDia Cairo (CairoOptions "FAS Align.pdf" (Width 800) PDF True) d1
- defaultMain d1
+-- defaultMain d1
  
