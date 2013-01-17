@@ -10,9 +10,7 @@
 -- 
 --
 -----------------------------------------------------------------------------
-
 module MiRanda.BranchLen where
-
 import           Control.Arrow
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.HashMap.Strict as H
@@ -27,10 +25,8 @@ isLeaf :: NewickTree a -> Bool
 isLeaf (NTLeaf _ _) = True
 isLeaf _ = False
 
-
 newick :: NewickTree DefDecor
 newick = parseNewick treePara
-
 
 calcBranchLength :: NewickTree DefDecor -> [Label] -> Double
 calcBranchLength = flip go

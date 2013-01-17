@@ -23,6 +23,7 @@ import Data.List
 import Control.Arrow
 import Data.Function
 import Data.Maybe
+import Data.Monoid
 
 getGapRangeFromTrueRange :: Pair -> UTR -> (Int,Int)
 getGapRangeFromTrueRange p utr =
@@ -38,9 +39,9 @@ getGapRangeFromTrueRange p utr =
     in (rbeg,rend)
 
 
--- | 仅返回homos中的taxID
-getSpeciesWithSameSeedN8Seq :: Site -> UTR -> [UTR] -> [Int]
-getSpeciesWithSameSeedN8Seq s utr homos =
+-- | 仅返回homos中的taxID,当seedType为8mer以外时,调用该函数决定BL
+getSpeciesWithSameSeedSeq :: Site -> UTR -> [UTR] -> [Int]
+getSpeciesWithSameSeedSeq s utr homos =
     let seedR = seedMatchRange s
         seqStr = extractSeq utr
         sPair = getGapRangeFromTrueRange seedR utr
@@ -48,36 +49,48 @@ getSpeciesWithSameSeedN8Seq s utr homos =
     in map snd $ filter ((== seed) . fst) $
        map ((extractStr sPair . extractSeq) &&& taxonomyID) homos
        
--- | [Int] 包含source sp taxID
+-- | 返回各种类型Seed对应的序列相同的物种分组
 groupHomoSpWithSeedType :: Site -> UTR -> [UTR] -> [(SeedType,[Int])]
 groupHomoSpWithSeedType s utr homos =
     let siteRange = utrRange s
         sPair = getGapRangeFromTrueRange siteRange utr
         miRStr = tToU . miRNASite3' . align $ s
-    in filter
-       ((\st ->
-          st == M8 ||
-          st == M7M8 ||
-          st == M7A1) . fst) $
-        map ((fst . head) &&& (map snd)) $
-        groupBy ((==) `on` fst) $
-        sortBy (compare `on` fst) $
+    in  sortBy (compare `on` fst) $ map ((fst . head) &&& (map snd)) $
+        map (map snd .
+             maximumBy (compare `on` length) .
+             groupBy ((==) `on` fst)) $
+        groupBy ((==) `on` (fst . snd)) $
+        sortBy
+        (\ a b ->
+          compare  (fst . snd $ a) (fst . snd $ b) <>
+          compare  (fst a) (fst b)
+        ) $
         map
         (\(siteStr,taxID) ->
-          let b = B8.pack $
+          let b = B8.reverse $ B8.pack $
                   B8.zipWith
                   (\a b ->
                     if (a == 'A' && b == 'U') ||
-                       (b == 'U' && a == 'A') ||
+                       (a == 'U' && b == 'A') ||
                        (a == 'G' && b == 'C') ||
                        (a == 'C' && b == 'G')
                     then '|'
                     else if (a == 'G' && b == 'U') ||
                             (a == 'U' && b == 'G')
                          then ':'
-                         else ' ') miRStr siteStr
-              seedT = getSeedType $ Align miRStr siteStr b
-          in (seedT,taxID)) $
+                         else ' ')
+                  -- 必需从反向开始检测匹配,
+                  -- 因为miRStr 和 siteStr因为插入和删除可能不等长
+                  -- 源于miranda的site位点信息不准确，其site位点区间包含'-'
+                  -- 这里只需要检测seed match类型，从反向开始逆推"大概应该"是安全的
+                  -- TargetScan的位点检测也不准确，它是以3’配对最大化来决定热力学结构的
+                  -- 由热力学结构来判定3'配对应该更科学些
+                  (B8.reverse miRStr) (B8.reverse siteStr)
+              al = Align miRStr siteStr b
+              seedT = getSeedType al
+              sMStr = getSiteSeqAtSeedMatch al
+              
+          in (sMStr,(seedT,taxID))) $
         map ((tToU . extractStr sPair . extractSeq) &&& taxonomyID) $ utr:homos
 
         
@@ -157,7 +170,6 @@ getSeedType (Align miR3' mR5' b) =
                then M6O
                else Imperfect
 
--- | May have problem
 getSeedMatchSite :: MSite -> Pair
 getSeedMatchSite site =
   let P _ down = _mRNARange site
@@ -165,7 +177,6 @@ getSeedMatchSite site =
       seed = _seedType site
       (idxV,n) = seedToIdx miR3'
       at = UV.unsafeIndex
-      fstC = UV.head idxV
       P i j = case seed of
                 M8 -> P 0 7
                 M7A1 -> P 0 7
@@ -175,3 +186,16 @@ getSeedMatchSite site =
                 _    -> P 1 7
   in P (down - idxV `at` j) (down - idxV `at` i)
 
+getSiteSeqAtSeedMatch :: Align -> ByteString
+getSiteSeqAtSeedMatch al@(Align miR3' mR5' b) =
+  let (idxV,n) = seedToIdx miR3'
+      down = B8.length mR5'
+      at = UV.unsafeIndex
+      P i j = case getSeedType al of
+                M8 -> P 0 7
+                M7A1 -> P 0 7
+                M7M8 -> P 1 7
+                M6   -> P 1 7
+                M6O  -> P 2 7
+                _    -> P 1 7
+  in extractStr ((down - idxV `at` j),(down - idxV `at` i)) mR5'

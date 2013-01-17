@@ -40,21 +40,23 @@ import           Debug.Trace
 import           Control.Arrow
 import           Text.Printf
 
--- | for debug 
+-- | for debug use, most sites should be the same as targetscan 's out put
 toTargetScanOutFormat :: [SiteLine] -> [B8.ByteString]
 toTargetScanOutFormat =
+    (headLine :) .
     map 
     (\sl ->
       let csp = context_Score_Plus sl
           toBS :: Show a => a -> B8.ByteString
           toBS = B8.pack . show
           toBS' = B8.pack . myShow
+          toNum = B8.pack . printf "%.3f" 
           myShow e = case e of
               Nothing -> ""
               Just e -> printf "%.3f" e
-          Con _ bl pct = conserve_Score sl
+          Con bool bl pct = conserve_Score sl
       in miRID sl <> "\t" <>
-         syb (geneID sl) <> " " <> ref (geneID sl) <> "\t" <>
+         syb (geneID sl) <> "\t" <> ref (geneID sl) <> "\t" <>
          
          (toBS $ (beg &&& end) $ seedRange sl) <> "\t" <>
          (toBS $ seed sl) <> "\t" <>
@@ -65,10 +67,19 @@ toTargetScanOutFormat =
          (toBS' $ fmap taContribPlus csp) <> "\t" <>
          (toBS' $ fmap spsContribPlus csp) <> "\t" <>
          (toBS' $ fmap contextPlus csp) <> "\t" <>
-         (toBS $ bl) <> "\t" <>
-         (toBS $ pct)
-    )
-    
+         (toNum bl) <> "\t" <>
+         (B8.pack $ myShow pct) <> "\t" <> toBS bool
+    ) . sortBy (compare `on` seedRange)
+  where
+    headLine = "#miRNA" <> "\t" <> "GeneSymbol" <> "\t" <>
+               "RefSeq" <> "\t" <> "SiteRange" <> "\t" <>
+               "SeedMatch" <> "\t" <> "SiteContrib" <> "\t" <>
+               "3'Pairing" <> "\t" <> "LocalAU" <> "\t" <>
+               "PosContrib" <> "\t" <> "TAContrib" <> "\t" <>
+               "SPSContrib" <> "\t" <> "ContextPlus" <> "\t" <>
+               "BL" <> "\t" <> "Pct" <> "\t" <> "IsConseved"
+
+        
 toSiteLines :: [Record] -> [SiteLine]
 toSiteLines rs = concatMap snd $ getSites $ zip rs (getConservations rs)
 

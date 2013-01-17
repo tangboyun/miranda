@@ -86,7 +86,7 @@ getConservations records = go $ zip records (toBranchLength records)
                          tree = binTreeVec `atV` binIdx
                      in if sT /= M8
                         then let homoIDs = map show $
-                                           getSpeciesWithSameSeedN8Seq s
+                                           getSpeciesWithSameSeedSeq s
                                            thisUTR otherUTRs
                                  bl = if null homoIDs
                                       then 0
@@ -95,7 +95,8 @@ getConservations records = go $ zip records (toBranchLength records)
                              in Con isC bl $ fmap (calcPct bl) $
                                 hashMapLookup sT seed
                         else let stSps = groupHomoSpWithSeedType s thisUTR otherUTRs
-                                 bls = map
+                                 bls = -- trace (show stSps) $
+                                       map
                                        (\(stype,ids) ->
                                          -- maybe include current id here ?
                                          let bl = if length ids == 1
@@ -137,7 +138,8 @@ getRawScore utr l s =
   in RS paScore auScore posScore
 
 getPosScore :: Pair -> Int -> PosScore
-getPosScore (P a b) utrL = PosScore $ min maxDistToNearestEndOfUTREnd $ min (fromIntegral a) (fromIntegral $ utrL-1-b)
+getPosScore (P a b) utrL = PosScore $ min maxDistToNearestEndOfUTREnd $
+                           min (fromIntegral a) (fromIntegral $ utrL-1-b)
   where
     maxDistToNearestEndOfUTREnd = 1500
     
@@ -190,44 +192,54 @@ getPairScore s (Align miR3' mR5' b) =
              else scanScore (idx+1) 0 preScore
       | otherwise = let offset = abs $ miIdx - utrIdx
                     in maxScore - max 0 (0.5 * fromIntegral (offset - 2))
-  
-getAUScore :: ByteString -> MSite -> AUScore
-getAUScore utr site =
-  let P up dn = getSeedMatchSite site
+
+getAUScoreImpl :: SeedType -> Pair -> ByteString -> AUScore
+getAUScoreImpl st (P up' dn) utr =
+  let up = case st of
+          M8 -> up' - 1
+          M7M8 -> up' - 1
+          M6O -> up' - 1
+          _ -> up' - 2
+
       (us,ds) = let ls = map (1/) [2.0..]
                     ls1 = 1:ls
                     ls2 = 0.5:ls
-                in case _seedType site of
+                in case st of
                   M8 -> (ls1,ls)
                   M7M8 -> (ls1,ls2)
                   M7A1 -> (ls,ls)
                   _   -> (ls,ls2)
-                  
       up30 = B8.unpack $ B8.take 30 $
              B8.map ((\c ->
-                       if c == 'U'
-                       then 'T'
+                       if c == 'T'
+                       then 'U'
                        else c) . toUpper) $
              B8.reverse $ B8.take up utr
       dn30 = B8.unpack $ B8.take 30 $
              B8.map ((\c ->
-                       if c == 'U'
-                       then 'T'
+                       if c == 'T'
+                       then 'U'
                        else c) . toUpper) $
-             B8.drop (dn+1) utr
+             B8.drop dn utr
       total = foldl1' (+) $
               zipWith (\_ b -> b) up30 us ++
               zipWith (\_ b -> b) dn30 ds
       local = foldl1' (+) $
               zipWith (\c s ->
-                        if c == 'A' || c == 'T'
+                        if c == 'A' || c == 'U'
                         then s
                         else 0) up30 us ++
               zipWith (\c s ->
-                        if c == 'A' || c == 'T'
+                        if c == 'A' || c == 'U'
                         then s
                         else 0) dn30 ds
   in AUScore $ local / total
+
+getAUScore :: ByteString -> MSite -> AUScore
+getAUScore utr site =
+    let p = getSeedMatchSite site
+        st = _seedType site
+    in getAUScoreImpl st p utr
 
 getSiteContrib :: SeedType -> Maybe Double
 getSiteContrib st = siteContribMap ! fromEnum st

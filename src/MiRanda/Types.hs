@@ -121,7 +121,7 @@ data Setting = Setting
 data Pair = P
   { beg :: {-# UNPACK #-} !Int -- begin at 0
   , end :: {-# UNPACK #-} !Int -- not include end
-  } deriving (Show,Eq)
+  } deriving (Show,Eq,Ord)
 
 data MScore = MScore
   { structureScore :: {-# UNPACK #-} !Double

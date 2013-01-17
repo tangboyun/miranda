@@ -38,6 +38,7 @@ geneIDs = ["LIN28B"]
 utrF' = "/tmp/testUTR.txt"
 
 main = do
+ --   print $ getAUScoreImpl M7M8 (P 44 51) $ B8.filter (/= '-') utrS
  -- str <- L8.readFile utrF
  -- let ls = L8.lines $ L8.filter (/= '\r') str
  --     str' = L8.intercalate "\n" $ head ls : filter ((`elem` geneIDs).(!! 2) . L8.split '\t') (tail ls)
