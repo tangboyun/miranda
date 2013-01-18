@@ -58,8 +58,7 @@ checkConservation st bl =
     case st of
         M8 -> bl >= 0.8
         M7M8 -> bl >= 1.3
-        M7A1 -> bl >= 1.6
-        _ -> False
+        _ -> bl >= 1.6
 
 getConservations :: [Record] -> [[Conservation]]
 getConservations records = go $ zip records (toBranchLength records)

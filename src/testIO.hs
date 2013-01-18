@@ -28,7 +28,7 @@ import Diagrams.Prelude hiding (align)
 import Diagrams.Backend.Cairo.CmdLine
 import MiRanda.Score
 import Data.List
-
+import MiRanda.Sheet.TargetSheet
 spec = "Human"
 inF = "/tmp/miRNA.fa"
 -- utrF = "/home/tangboyun/miRNAPrediction/UTR_Sequences.txt"
@@ -47,6 +47,8 @@ main = do
  rs <- mapM (\fa -> miRNAPredict spec fa utrF') fas
 
  mapM_ (B8.putStrLn) $ toTargetScanOutFormat $ toSiteLines $ concat rs
+
+ writeFile "test.xml" $ showSpreadsheet $ mkTargetWorkbook "hsa-let-7i" $ concat rs
 -- writeFile "Summary for predicted targets.xml" $ showSpreadsheet $
  --   mkTargetWorkbook (seqlabel fa) $ rs
 
