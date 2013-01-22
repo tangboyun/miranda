@@ -22,24 +22,31 @@ import           Text.XML.SpreadsheetML.Types
 import           Text.XML.SpreadsheetML.Util
 import Data.List
 import Data.Char
+import Text.Printf
+import MiRanda.IO
+import Control.Parallel.Strategies
+
 
 mkTargetWorkbook :: ByteString -> [Record] -> Workbook
 mkTargetWorkbook miID rs =
-  addS $
-  mkWorkbook $
-  [mkWorksheet (Name $ B8.unpack miID) $ 
-   mkTable $
-   headLine miID : classLine : mkRow nameCells # withStyleID "bold" :
-   map toRow rs
-  ]
+    addS $
+    mkWorkbook $
+    [mkWorksheet (Name $ B8.unpack miID) $ 
+     mkTable $
+     headLine miID : classLine : mkRow nameCells # withStyleID "bold" :
+     map toRow (sort $ withStrategy (evalList rseq) $ toRefLines rs)
+    ]
   where
     addS wb = wb
               # addStyle (Name "bold") boldCell
               # addStyle (Name "head") headCell
+              # addStyle (Name "site") siteCell
               # addStyle (Name "tsScore") tsScoreCell
               # addStyle (Name "miScore") miScoreCell
               # addStyle (Name "seedMatch") seedMatchCell
-              # addStyle (Name "anno") annoCell                            
+              # addStyle (Name "anno") annoCell
+              # addStyle (Name "con") conCell
+              # addStyle (Name "poor") poorCell
               
 headLine miID = mkRow
                 [string ("Target genes for " ++ B8.unpack miID)
@@ -50,31 +57,43 @@ headLine miID = mkRow
   
 classLine = mkRow
             [emptyCell
+            ,emptyCell
+            ,string "Sites" # withStyleID "site"
             ,string "TargetScan"
-             # mergeAcross 6 -- con site pa au pos ta sps
+             # mergeAcross 1 -- context+ context
              # withStyleID "tsScore"
             ,string "miRanda"
              # mergeAcross 1
              # withStyleID "miScore"
-            ,string "Seed Match"
-             # mergeAcross 6
+            ,string "Conservation"
+             # mergeAcross 1
+             # withStyleID "con"
+            ,string "Conserved Sites"
+             # mergeAcross 5
              # withStyleID "seedMatch"
+            ,string "Poorly Conserved Sites"
+             # mergeAcross 5
+             # withStyleID "poor"
             ,string "Annotations"
              # mergeAcross 1
              # withStyleID "anno"
             ]
 
-nameCells = [string "GeneSymbol"
+nameCells = [string "RefSeqID"
+            ,string "GeneSymbol"
+            ,string "Total"
             ,string "Context+"
-            ,string "Site-Type"
-            ,string "3' Pairing"
-            ,string "Local AU"
-            ,string "Pos Score"
-            ,string "TA"
-            ,string "SPS"
+            ,string "Context"
             ,string "Structure"
             ,string "Energy"
-            ,string "Total"
+            ,string "Branch Length"
+            ,string "Pct"
+            ,string "8mer"
+            ,string "7mer-m8"
+            ,string "7mer-A1"
+            ,string "6mer"
+            ,string "Offset 6mer"
+            ,string "Imperfect"
             ,string "8mer"
             ,string "7mer-m8"
             ,string "7mer-A1"
@@ -83,65 +102,38 @@ nameCells = [string "GeneSymbol"
             ,string "Imperfect"
             ,string "UTR Length"
             ,string "UTR Sequence"
-            ] 
+            ]
 
-toRow :: Record -> Row
-toRow re =
-  let gid = B8.unpack $ gene re
+
+toRow :: RefLine -> Row
+toRow rl =
+  let (Gene s r) = rgene rl
+      ns = fromIntegral $ totalSite rl
+      csp = case rcontextScorePlus rl of
+          Just cp -> myDouble $ contextPlus cp
+          Nothing -> emptyCell
+      c = case rcontextScore rl of
+          Just cs -> myDouble $ context cs
+          Nothing -> emptyCell
+      (MScore stru free) = rmirandaScore rl
+      (Con _ bl p) = rconserveScore rl
+      pc = case p of
+          Just p' -> myDouble p'
+          Nothing -> emptyCell
+      (a1,b1,c1,d1,e1,f1) = conservedSite rl
+      (a2,b2,c2,d2,e2,f2) = nonConservedSite rl
   in mkRow $
-     string gid :
-     map number (calcTotalScores $ predictedSites re) ++
-     map (number . fromIntegral)
-     (countSeedMath $ predictedSites re) ++
-     getAnnos re
-
-calcTotalScores :: [Site] -> [Double]
-calcTotalScores ss =
-  (\(c,si,p,l,o,t,sp,s,e) -> [c,si,p,l,o,t,sp,s,e]) $
-  foldl' (\(c,si,p,l,o,t,sp,s,e) site ->
-           let (c',si',p',l',o',t',sp') =
-                 case contextScorePlus site of
-                   Nothing -> (0,0,0,0,0,0,0)
-                   Just con ->
-                     (contextPlus con
-                      ,siteTypeContribPlus con
-                      ,pairingContribPlus con
-                      ,localAUContribPlus con
-                      ,positionContribPlus con
-                      ,taContribPlus con
-                      ,spsContribPlus con)
-               newc = c' + c
-               newsi = si + si'
-               newp = p + p'
-               newl = l + l'
-               newo = o + o'
-               newt = t + t'
-               newsp = sp + sp'
-               (MScore s' e') = miRandaScore site
-               news = s' + s
-               newe = e' + e
-           in (newc,newsi,newp,newl,newo,newt,newsp,news,newe)
-         ) (0,0,0,0,0,0,0,0,0) ss
-  
-countSeedMath :: [Site] -> [Int]
-countSeedMath ss =
-  (\(t,m8,m7m8,m7a1,m6,m6o,i) -> [t,m8,m7m8,m7a1,m6,m6o,i]) $
-  foldl'
-  (\(t,m8,m7m8,m7a1,m6,m6o,i) site ->
-    let st = seedType site
-    in case st of
-      M8 -> (t+1,m8+1,m7m8,m7a1,m6,m6o,i)
-      M7M8 -> (t+1,m8,m7m8+1,m7a1,m6,m6o,i)
-      M7A1 -> (t+1,m8,m7m8,m7a1+1,m6,m6o,i)
-      M6 -> (t+1,m8,m7m8,m7a1,m6+1,m6o,i)
-      M6O -> (t+1,m8,m7m8,m7a1,m6,m6o+1,i)
-      _ -> (t+1,m8,m7m8,m7a1,m6,m6o,i+1)
-    ) (0,0,0,0,0,0,0) ss
-
-getAnnos :: Record -> [Cell]
-getAnnos re =
-  let se = B8.filter isAlpha $ unGS $ alignment $ utr re
-  in [number (fromIntegral $ B8.length se)
-     ,string (B8.unpack se)]
+     string (B8.unpack r) :
+     string (B8.unpack s) :
+     number ns : csp : c :
+     myDouble stru : myDouble free :
+     myDouble bl : pc :
+     map (number . fromIntegral) [a1,b1,c1,d1,e1,f1,a2,b2,c2,d2,e2,f2] ++
+     [number $ fromIntegral $ utrLength rl
+     ,string $ B8.unpack $ utrSeq rl]
      
   
+myDouble :: Double -> Cell
+myDouble d = if (snd $ properFraction d) == 0
+             then number d
+             else number $ read $ printf "%.3f" d
