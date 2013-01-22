@@ -25,6 +25,7 @@ import Data.Function
 import Data.Maybe
 import Data.Monoid
 
+
 getGapRangeFromTrueRange :: Pair -> UTR -> (Int,Int)
 getGapRangeFromTrueRange p utr =
     let seqStr = extractSeq utr
@@ -35,9 +36,9 @@ getGapRangeFromTrueRange p utr =
                           else 1) $
                     B8.unpack $ seqStr
         rbeg = fromJust $ UV.findIndex (== (1+beg p)) charCount
-        rend = fromJust $ UV.findIndex (== (1+end p)) charCount
-    in (rbeg,rend)
-
+        rend = fromJust $ UV.findIndex (== (end p)) charCount
+    in (rbeg,rend+1)
+{-# INLINE getGapRangeFromTrueRange #-}
 
 -- | 仅返回homos中的taxID,当seedType为8mer以外时,调用该函数决定BL
 getSpeciesWithSameSeedSeq :: Site -> UTR -> [UTR] -> [Int]
@@ -48,9 +49,11 @@ getSpeciesWithSameSeedSeq s utr homos =
         seed = extractStr sPair seqStr
     in map snd $ filter ((== seed) . fst) $
        map ((extractStr sPair . extractSeq) &&& taxonomyID) homos
+{-# INLINE getSpeciesWithSameSeedSeq #-}
        
 -- | 返回各种类型Seed对应的序列相同的物种分组
 groupHomoSpWithSeedType :: Site -> UTR -> [UTR] -> [(SeedType,[Int])]
+{-# INLINE groupHomoSpWithSeedType #-}
 groupHomoSpWithSeedType s utr homos =
     let siteRange = utrRange s
         sPair = getGapRangeFromTrueRange siteRange utr
@@ -98,24 +101,30 @@ tToU :: ByteString -> ByteString
 tToU = B8.map ((\c -> if c == 'T'
                       then 'U'
                       else c) . toUpper)
+{-# INLINE tToU #-}       
         
 extractStr :: (Int,Int) -> ByteString -> ByteString
 extractStr (i,j) = B8.take (j-i) . B8.drop i
+{-# INLINE extractStr #-}
 
 extractSeq :: UTR -> ByteString
 extractSeq = unGS . alignment
+{-# INLINE extractSeq #-}
 
-extractSeedN8FromBS :: ByteString -> ByteString 
+extractSeedN8FromBS :: ByteString -> ByteString
+{-# INLINE extractSeedN8FromBS #-}
 extractSeedN8FromBS miR =
     let mi = B8.reverse miR
     in B8.pack $ map (B8.index mi) $
        take 7 $ drop 1 $ B8.findIndices isAlpha mi
 
 extractSeedN8 :: Align -> ByteString
+{-# INLINE extractSeedN8 #-}
 extractSeedN8 (Align miR _ _) = extractSeedN8FromBS miR
 
 
 seedToIdx :: ByteString -> (UV.Vector Int,Int)
+{-# INLINE seedToIdx #-}
 seedToIdx miR3' =
   let miR = B8.reverse miR3'
       nS  = B8.length seed
@@ -124,6 +133,7 @@ seedToIdx miR3' =
              B8.findIndices isAlpha miR
       sVec = UV.fromList $ B8.unpack seed
   in (UV.findIndices isAlpha sVec,nS)
+
 
 lengthOfEach (Align miR3' _ _) =
   let miR = B8.reverse miR3'
@@ -137,6 +147,7 @@ lengthOfEach (Align miR3' _ _) =
   in reverse $ map B8.length $ go is
      
 getSeedType :: Align -> SeedType
+{-# INLINE getSeedType #-}
 getSeedType (Align miR3' mR5' b) = 
   let (idxV,nS) = seedToIdx miR3'
       idxV' = UV.fromList [0..7]
@@ -171,6 +182,7 @@ getSeedType (Align miR3' mR5' b) =
                else Imperfect
 
 getSeedMatchSite :: MSite -> Pair
+{-# INLINE getSeedMatchSite #-}
 getSeedMatchSite site =
   let P _ down = _mRNARange site
       (Align miR3' mR5' b) = _align site
@@ -187,6 +199,7 @@ getSeedMatchSite site =
   in P (down - idxV `at` j) (down - idxV `at` i)
 
 getSiteSeqAtSeedMatch :: Align -> ByteString
+{-# INLINE getSiteSeqAtSeedMatch #-}
 getSiteSeqAtSeedMatch al@(Align miR3' mR5' b) =
   let (idxV,n) = seedToIdx miR3'
       down = B8.length mR5'

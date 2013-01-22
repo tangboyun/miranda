@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, DisambiguateRecordFields #-}
+{-# LANGUAGE GADTs, GeneralizedNewtypeDeriving #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : 
@@ -16,11 +16,27 @@ module MiRanda.Types where
 
 import Data.ByteString (ByteString)
 import Data.Vector.Unboxed
+import Data.Monoid
 
+data RefLine = RL
+  { rmiRID :: !ByteString
+  , rgene :: !Gene
+  , rmirandaScore :: !MScore
+  , rconserveScore :: !Conservation
+  , rrawScore :: !RawScore
+  , rcontextScore :: !(Maybe ContextScore)
+  , rcontextScorePlus :: !(Maybe ContextScorePlus)
+  , totalSite :: !Int
+  , conservedSite :: !(Int,Int,Int,Int,Int,Int)
+  , nonConservedSite :: !(Int,Int,Int,Int,Int,Int)
+  , utrLength :: !Int
+  , utrSeq :: !ByteString
+  } deriving (Show,Eq)
 
 data SiteLine = SL
   { miRID :: ByteString
   , geneID :: Gene
+  , mirandaScore :: MScore
   , conserve_Score :: Conservation
   , raw_Score :: RawScore
   , context_Score :: Maybe ContextScore
@@ -126,7 +142,7 @@ data Pair = P
 data MScore = MScore
   { structureScore :: {-# UNPACK #-} !Double
   , freeEnergy :: {-# UNPACK #-} !Double
-  } deriving (Show,Eq,Ord)
+  } deriving (Show,Eq)
              
 
 data Match = Match
@@ -187,18 +203,18 @@ data RawScore = RS
 
 
 newtype PairScore = PairScore Double
-                    deriving (Show,Eq,Ord)
+                    deriving (Show,Eq,Ord,Additive)
 newtype AUScore = AUScore Double
-                  deriving (Show,Eq,Ord)
+                  deriving (Show,Eq,Ord,Additive)
 
 newtype PosScore = PosScore Double
-                   deriving (Show,Eq,Ord)
+                   deriving (Show,Eq,Ord,Additive)
 
 newtype SPScore = SPScore Double
-                   deriving (Show,Eq,Ord)
+                   deriving (Show,Eq,Ord,Additive)
                             
 newtype TAScore = TAScore Double
-                   deriving (Show,Eq,Ord)
+                   deriving (Show,Eq,Ord,Additive)
                             
 instance Show SeedType where
   show s =
@@ -209,3 +225,77 @@ instance Show SeedType where
       M6        -> "6mer"
       M6O       -> "Offset 6mer"
       Imperfect -> "Imperfect"
+
+
+class Additive a where
+    add :: a -> a -> a
+
+instance Additive Bool where
+    add False False = False
+    add _ _ = True
+    
+instance Additive Double where
+    add = (+)
+
+instance Additive Int where
+    add = (+)
+
+instance Additive a => Additive (Maybe a) where
+    add Nothing Nothing = Nothing
+    add Nothing b@(Just _) = b
+    add a@(Just _) Nothing = a
+    add (Just a) (Just b) = Just $ a `add` b
+
+instance Additive MScore where
+    add (MScore a1 b1) (MScore a2 b2) =
+        MScore (a1 `add` a2) (b1 `add` b2)
+
+instance Additive RawScore where
+    add (RS a1 b1 c1) (RS a2 b2 c2) =
+        RS (a1 `add` a2) (b1 `add` b2) (c1 `add` c2)
+
+instance Additive ContextScore where
+    add (CS a1 b1 c1 d1 e1) (CS a2 b2 c2 d2 e2) =
+        CS (a1 `add` a2) (b1 `add` b2) (c1 `add` c2)
+        (d1 `add` d2) (e1 `add` e2)
+
+
+
+
+instance Additive ContextScorePlus where
+    add (CSP a1 b1 c1 d1 e1 f1 g1)
+        (CSP a2 b2 c2 d2 e2 f2 g2) =
+        CSP (a1 `add` a2) (b1 `add` b2)
+        (c1 `add` c2) (d1 `add` d2)
+        (e1 `add` e2) (f1 `add` f2)
+        (g1 `add` g2)
+
+instance Additive Conservation where
+    add (Con a1 b1 c1) (Con a2 b2 c2) =
+        Con (a1 `add` a2) (b1 `add` b2) (c1 `add` c2)
+
+instance Ord RefLine where
+    compare rf1 rf2 =
+        myCompare (rcontextScorePlus rf1) (rcontextScorePlus rf2) <>
+        myCompare (rcontextScore rf1) (rcontextScore rf2) <>
+        compare (rmirandaScore rf1) (rmirandaScore rf2) <>
+        compare (rconserveScore rf1) (rconserveScore rf2) <>
+        flip compare (totalSite rf1) (totalSite rf2)
+
+myCompare :: Ord a => Maybe a -> Maybe a -> Ordering
+myCompare Nothing Nothing = EQ
+myCompare (Just a1) (Just a2) = compare a1 a2
+myCompare (Just _) Nothing = LT
+myCompare Nothing (Just _) = GT
+      
+instance Ord MScore where
+    compare ms1 ms2 =
+        flip compare (structureScore ms1) (structureScore ms2) <>
+        compare (freeEnergy ms1) (freeEnergy ms2)
+
+instance Ord Conservation where
+    compare con1 con2 =
+        flip compare (branchLength con1) (branchLength con2) <>
+        flip myCompare (pct con1) (pct con2)
+        
+

@@ -40,6 +40,7 @@ import           Debug.Trace
 import           Control.Arrow
 import           Text.Printf
 
+
 -- | for debug use, most sites should be the same as targetscan 's out put
 toTargetScanOutFormat :: [SiteLine] -> [B8.ByteString]
 toTargetScanOutFormat =
@@ -83,24 +84,8 @@ toTargetScanOutFormat =
 toSiteLines :: [Record] -> [SiteLine]
 toSiteLines rs = concatMap snd $ getSites $ zip rs (getConservations rs)
 
-getSites :: [(Record,[Conservation])] -> [(Record,[SiteLine])]
-getSites [] = []
-getSites ((r,cons):rs) =
-    let ss = predictedSites r
-        mi = miRNA r
-        u = utr r
-        g = Gene (geneSymbol u) (refSeqID u)
-        sls = map (\(con,s) ->
-                    let raw = rawScore s
-                        conS = contextScore s
-                        conSP = contextScorePlus s
-                        seedM = seedMatchRange s
-                        siteM = utrRange s
-                        st = seedType s
-                        al = align s
-                    in SL mi g con raw conS conSP seedM siteM st al
-                  ) $ zip cons ss
-    in (r,sls): getSites rs
+toRefLines :: [Record] -> [RefLine]
+toRefLines rs = map mergeScore $ zip rs (getConservations rs)
     
 
 mkProcess :: FilePath -> FilePath -> IO CreateProcess

@@ -30,9 +30,10 @@ import MiRanda.Score
 import Data.List
 import MiRanda.Sheet.TargetSheet
 spec = "Human"
-inF = "/tmp/miRNA.fa"
--- utrF = "/home/tangboyun/miRNAPrediction/UTR_Sequences.txt"
+inF = "/home/tangboyun/Dropbox/miRanda Test Data/miRNA.fa"
 
+utrF = "/home/tangboyun/miRNAPrediction/UTR_Sequences.txt"
+-- utrF = "/home/tangboyun/Dropbox/miRanda Test Data/testUTR.txt"
 geneIDs = ["LIN28B"]
 
 utrF' = "/tmp/testUTR.txt"
@@ -44,11 +45,11 @@ main = do
  --     str' = L8.intercalate "\n" $ head ls : filter ((`elem` geneIDs).(!! 2) . L8.split '\t') (tail ls)
  -- L8.writeFile utrF' str'
  fas <- readFasta inF
- rs <- mapM (\fa -> miRNAPredict spec fa utrF') fas
+-- rs <- 
 
- mapM_ (B8.putStrLn) $ toTargetScanOutFormat $ toSiteLines $ concat rs
+-- mapM_ (B8.putStrLn) $ toTargetScanOutFormat $ toSiteLines rs
 
- writeFile "test.xml" $ showSpreadsheet $ mkTargetWorkbook "hsa-let-7i" $ concat rs
+ miRNAPredict spec (head fas) utrF >>= writeFile "/tmp/test.xml" . showSpreadsheet . mkTargetWorkbook "hsa-let-7i"
 -- writeFile "Summary for predicted targets.xml" $ showSpreadsheet $
  --   mkTargetWorkbook (seqlabel fa) $ rs
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : 
@@ -20,17 +21,19 @@ import           Data.Char
 import qualified Data.HashMap.Strict as H
 import qualified Data.IntMap.Strict as IM
 import           Data.List
+import Data.Monoid
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
+import           MiRanda.BranchLen
 import           MiRanda.BranchLen.Newick
 import           MiRanda.Parameter
 import           MiRanda.Parameter.BL
 import           MiRanda.Parameter.FSPPara
 import           MiRanda.Parameter.PCT
-import MiRanda.BranchLen
 import           MiRanda.Types
 import           MiRanda.Util
-
+import Text.Printf
+import Data.Function
 
 atV :: V.Vector a -> Int -> a
 atV = (V.!)
@@ -59,8 +62,10 @@ checkConservation st bl =
         M8 -> bl >= 0.8
         M7M8 -> bl >= 1.3
         _ -> bl >= 1.6
-
+{-# INLINE checkConservation #-}
+        
 getConservations :: [Record] -> [[Conservation]]
+{-# INLINE getConservations #-}
 getConservations records = go $ zip records (toBranchLength records)
   where
     hashMapLookup st seedStr =
@@ -132,17 +137,19 @@ getRawScore :: UTR -> Int -> MSite -> RawScore
 getRawScore utr l s =
   let posScore = getPosScore (getSeedMatchSite s) l
       paScore = getPairScore (_seedType s) (_align s)
-      utrSD = B8.filter isAlpha $ unGS $ alignment utr
+      utrSD = B8.filter isAlpha $! unGS $ alignment utr
       auScore = getAUScore utrSD s
   in RS paScore auScore posScore
+{-# INLINE getRawScore #-}
 
 getPosScore :: Pair -> Int -> PosScore
-getPosScore (P a b) utrL = PosScore $ min maxDistToNearestEndOfUTREnd $
-                           min (fromIntegral a) (fromIntegral $ utrL-1-b)
+getPosScore (P a b) utrL = PosScore $! min maxDistToNearestEndOfUTREnd $!
+                           min (fromIntegral a) (fromIntegral $! utrL-1-b)
   where
     maxDistToNearestEndOfUTREnd = 1500
     
 getPairScore :: SeedType -> Align -> PairScore
+{-# INLINE getPosScore #-}
 getPairScore s (Align miR3' mR5' b) =
   PairScore $
   scanScore len 0
@@ -193,6 +200,7 @@ getPairScore s (Align miR3' mR5' b) =
                     in maxScore - max 0 (0.5 * fromIntegral (offset - 2))
 
 getAUScoreImpl :: SeedType -> Pair -> ByteString -> AUScore
+{-# INLINE getAUScoreImpl #-}
 getAUScoreImpl st (P up' dn) utr =
   let up = case st of
           M8 -> up' - 1
@@ -232,16 +240,18 @@ getAUScoreImpl st (P up' dn) utr =
                         if c == 'A' || c == 'U'
                         then s
                         else 0) dn30 ds
-  in AUScore $ local / total
+  in AUScore $! local / total
 
 getAUScore :: ByteString -> MSite -> AUScore
 getAUScore utr site =
     let p = getSeedMatchSite site
         st = _seedType site
     in getAUScoreImpl st p utr
+{-# INLINE getAUScore #-}
 
 getSiteContrib :: SeedType -> Maybe Double
 getSiteContrib st = siteContribMap ! fromEnum st
+{-# INLINE getSiteContrib #-}
 
 getContextScore :: SeedType -> RawScore -> Maybe ContextScore
 getContextScore st (RS (PairScore pairS) (AUScore auS) (PosScore posS)) =
@@ -257,7 +267,7 @@ getContextScore st (RS (PairScore pairS) (AUScore auS) (PosScore posS)) =
   where
     toScore :: Double -> Double -> Coef -> Double
     toScore score mean (Coef sl inter) = score * sl + inter - mean
-
+{-# INLINE getContextScore #-}
 
 getSPSTA :: SeedType -> ByteString -> (Maybe SPScore, Maybe TAScore)
 getSPSTA st seedWithN8 =
@@ -284,6 +294,7 @@ getSPSTA st seedWithN8 =
     pack bs =
       let str = B8.unpack $ B8.reverse bs
       in sum $ map (\(i,c) -> cToI c * 4^i) $ zip [0..] str
+{-# INLINE getSPSTA #-}         
 
 getContextScorePlus :: SeedType -> Align -> RawScore -> Maybe ContextScorePlus
 getContextScorePlus st ali rawScore =
@@ -322,3 +333,62 @@ getContextScorePlus st ali rawScore =
     fun s (minV,maxV) (reg,mean) =
       let s' = (s - minV) / (maxV - minV)
       in reg * (s' - mean)
+{-# INLINE getContextScorePlus #-}
+
+mergeScore :: (Record,[Conservation]) -> RefLine
+mergeScore (r,cs) =
+    let ss = predictedSites r
+        totalM = foldl1' add $ map miRandaScore ss
+        totalCon = foldl1' add cs
+        totalR = foldl1' add $ map rawScore ss
+        totalCS = foldl1' add $ map contextScore ss
+        totalCSP = foldl1' add $ map contextScorePlus ss
+        totalS = length ss
+        (conSite,nonConSite) =
+            foldl'
+            (\(con@(a1,b1,c1,d1,e1,f1),nonCon@(a2,b2,c2,d2,e2,f2)) (s,c) ->
+              if isConserved c
+              then let con' = case seedType s of
+                           M8 -> (a1+1,b1,c1,d1,e1,f1)
+                           M7M8 -> (a1,b1+1,c1,d1,e1,f1)
+                           M7A1 -> (a1,b1,c1+1,d1,e1,f1)
+                           M6 -> (a1,b1,c1,d1+1,e1,f1)
+                           M6O -> (a1,b1,c1,d1,e1+1,f1)
+                           Imperfect -> (a1,b1,c1,d1,e1,f1+1)
+                   in (con',nonCon)
+              else let nonCon' = case seedType s of
+                           M8 -> (a2+1,b2,c2,d2,e2,f2)
+                           M7M8 -> (a2,b2+1,c2,d2,e2,f2)
+                           M7A1 -> (a2,b2,c2+1,d2,e2,f2)
+                           M6 -> (a2,b2,c2,d2+1,e2,f2)
+                           M6O -> (a2,b2,c2,d2,e2+1,f2)
+                           Imperfect -> (a2,b2,c2,d2,e2,f2+1)
+                   in (con,nonCon')
+            ) ((0,0,0,0,0,0),(0,0,0,0,0,0)) $ zip ss cs
+        ut = utr r
+        u = B8.filter isAlpha . extractSeq . utr $ r
+        ul = B8.length u
+        g = Gene (geneSymbol ut) (refSeqID ut)
+    in RL (miRNA r) g totalM totalCon totalR totalCS
+       totalCSP totalS conSite nonConSite ul u
+{-# INLINE mergeScore #-}        
+
+getSites :: [(Record,[Conservation])] -> [(Record,[SiteLine])]
+getSites [] = []
+getSites ((r,cons):rs) =
+    let ss = predictedSites r
+        mi = miRNA r
+        u = utr r
+        g = Gene (geneSymbol u) (refSeqID u)
+        sls = map (\(con,s) ->
+                    let raw = rawScore s
+                        mS = miRandaScore s
+                        conS = contextScore s
+                        conSP = contextScorePlus s
+                        seedM = seedMatchRange s
+                        siteM = utrRange s
+                        st = seedType s
+                        al = align s
+                    in SL mi g mS con raw conS conSP seedM siteM st al
+                  ) $ zip cons ss
+    in (r,sls): getSites rs
