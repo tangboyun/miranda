@@ -38,3 +38,6 @@ tsScoreCell = title { bgColor = Just red }
 miScoreCell = title { bgColor = Just green }
 seedMatchCell = title { bgColor = Just mediumslateblue }
 annoCell = title { bgColor = Just lightpink }
+siteCell = title { bgColor = Just powderblue }
+conCell = title { bgColor = Just darkorange }
+poorCell = title { bgColor = Just violet }
