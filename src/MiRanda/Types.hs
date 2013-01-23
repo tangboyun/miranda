@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GADTs, GeneralizedNewtypeDeriving, BangPatterns #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : 
@@ -19,18 +19,18 @@ import Data.Vector.Unboxed
 import Data.Monoid
 
 data RefLine = RL
-  { rmiRID :: !ByteString
-  , rgene :: !Gene
-  , rmirandaScore :: !MScore
-  , rconserveScore :: !Conservation
-  , rrawScore :: !RawScore
-  , rcontextScore :: !(Maybe ContextScore)
-  , rcontextScorePlus :: !(Maybe ContextScorePlus)
-  , totalSite :: !Int
-  , conservedSite :: !(Int,Int,Int,Int,Int,Int)
-  , nonConservedSite :: !(Int,Int,Int,Int,Int,Int)
-  , utrLength :: !Int
-  , utrSeq :: !ByteString
+  { rmiRID :: ByteString
+  , rgene :: Gene
+  , rmirandaScore :: MScore
+  , rconserveScore :: Conservation
+  , rrawScore :: RawScore
+  , rcontextScore :: (Maybe ContextScore)
+  , rcontextScorePlus :: (Maybe ContextScorePlus)
+  , totalSite :: Int
+  , conservedSite :: (Int,Int,Int,Int,Int,Int)
+  , nonConservedSite :: (Int,Int,Int,Int,Int,Int)
+  , utrLength :: Int
+  , utrSeq :: ByteString
   } deriving (Show,Eq)
 
 data SiteLine = SL
@@ -39,8 +39,8 @@ data SiteLine = SL
   , mirandaScore :: MScore
   , conserve_Score :: Conservation
   , raw_Score :: RawScore
-  , context_Score :: Maybe ContextScore
-  , context_Score_Plus :: Maybe ContextScorePlus
+  , context_Score :: (Maybe ContextScore)
+  , context_Score_Plus :: (Maybe ContextScorePlus)
   , seedRange :: Pair
   , siteRange :: Pair
   , seed :: SeedType
@@ -55,9 +55,9 @@ data Gene = Gene
   } deriving (Show,Eq)
       
 data Conservation = Con
-  { isConserved :: !Bool
+  { isConserved :: Bool
   , branchLength :: {-# UNPACK #-} !Double
-  , pct :: !(Maybe Double)
+  , pct :: (Maybe Double)
   } deriving (Show,Eq)
   
 
@@ -92,8 +92,8 @@ data Record = Record
 data Site = Site
   { miRandaScore :: MScore
   , rawScore :: RawScore
-  , contextScore :: Maybe ContextScore
-  , contextScorePlus :: Maybe ContextScorePlus
+  , contextScore :: (Maybe ContextScore)
+  , contextScorePlus :: (Maybe ContextScorePlus)
   , seedMatchRange :: Pair
   , utrRange :: Pair
   , match :: Match
@@ -157,11 +157,11 @@ data Align = Align
   } deriving (Show,Eq)
 
 data Sta where
-  A :: { per :: Double} -> Sta
-  T :: { per :: Double} -> Sta
-  G :: { per :: Double} -> Sta
-  C :: { per :: Double} -> Sta
-  U :: { per :: Double} -> Sta
+  A :: { per :: !Double} -> Sta
+  T :: { per :: !Double} -> Sta
+  G :: { per :: !Double} -> Sta
+  C :: { per :: !Double} -> Sta
+  U :: { per :: !Double} -> Sta
   deriving (Show,Eq)
 
 data SeedType = M8   -- ^ 8mer site
@@ -202,13 +202,17 @@ data RawScore = RS
   } deriving (Show,Eq,Ord)
 
 
-newtype PairScore = PairScore Double
-                    deriving (Show,Eq,Ord,Additive)
-newtype AUScore = AUScore Double
-                  deriving (Show,Eq,Ord,Additive)
+newtype PairScore = PairScore
+  {unPair :: Double
+  } deriving (Show,Eq,Ord,Additive)
+             
+newtype AUScore = AUScore
+  {unAu :: Double
+  } deriving (Show,Eq,Ord,Additive)
 
-newtype PosScore = PosScore Double
-                   deriving (Show,Eq,Ord,Additive)
+newtype PosScore = PosScore
+  {unPos :: Double
+  } deriving (Show,Eq,Ord,Additive)
 
 newtype SPScore = SPScore Double
                    deriving (Show,Eq,Ord,Additive)
@@ -229,50 +233,74 @@ instance Show SeedType where
 
 class Additive a where
     add :: a -> a -> a
-
+    
 instance Additive Bool where
     add False False = False
     add _ _ = True
+    {-# INLINE add #-}
     
 instance Additive Double where
     add = (+)
+    {-# INLINE add #-}
 
 instance Additive Int where
     add = (+)
+    {-# INLINE add #-}
 
 instance Additive a => Additive (Maybe a) where
     add Nothing Nothing = Nothing
     add Nothing b@(Just _) = b
     add a@(Just _) Nothing = a
-    add (Just a) (Just b) = Just $ a `add` b
+    add (Just a) (Just b) = Just $! a `add` b
+    {-# INLINE add #-}
 
 instance Additive MScore where
-    add (MScore a1 b1) (MScore a2 b2) =
-        MScore (a1 `add` a2) (b1 `add` b2)
+    add (MScore !a1 !b1) !(MScore !a2 !b2) =
+        let !a = a1 `add` a2
+            !b = b1 `add` b2
+        in MScore a b
+    {-# INLINE add #-}
 
 instance Additive RawScore where
-    add (RS a1 b1 c1) (RS a2 b2 c2) =
-        RS (a1 `add` a2) (b1 `add` b2) (c1 `add` c2)
+    add (RS !a1 !b1 !c1) (RS !a2 !b2 !c2) =
+        let !a = a1 `add` a2
+            !b = b1 `add` b2
+            !c = c1 `add` c2
+        in RS a b c
+    {-# INLINE add #-}
 
 instance Additive ContextScore where
-    add (CS a1 b1 c1 d1 e1) (CS a2 b2 c2 d2 e2) =
-        CS (a1 `add` a2) (b1 `add` b2) (c1 `add` c2)
-        (d1 `add` d2) (e1 `add` e2)
-
+    add (CS !a1 !b1 !c1 !d1 !e1) (CS !a2 !b2 !c2 !d2 !e2) =
+        let !a = a1 `add` a2
+            !b = b1 `add` b2
+            !c = c1 `add` c2
+            !d = d1 `add` d2
+            !e = e1 `add` e2
+        in CS a b c d e
+    {-# INLINE add #-}
 
 
 
 instance Additive ContextScorePlus where
-    add (CSP a1 b1 c1 d1 e1 f1 g1)
-        (CSP a2 b2 c2 d2 e2 f2 g2) =
-        CSP (a1 `add` a2) (b1 `add` b2)
-        (c1 `add` c2) (d1 `add` d2)
-        (e1 `add` e2) (f1 `add` f2)
-        (g1 `add` g2)
+    add (CSP !a1 !b1 !c1 !d1 !e1 !f1 !g1)
+        (CSP !a2 !b2 !c2 !d2 !e2 !f2 !g2) =
+        let !a = a1 `add` a2
+            !b = b1 `add` b2
+            !c = c1 `add` c2
+            !d = d1 `add` d2
+            !e = e1 `add` e2
+            !f = f1 `add` f2
+            !g = g1 `add` g2
+        in CSP a b c d e f g
+    {-# INLINE add #-}
 
 instance Additive Conservation where
-    add (Con a1 b1 c1) (Con a2 b2 c2) =
-        Con (a1 `add` a2) (b1 `add` b2) (c1 `add` c2)
+    add (Con !a1 !b1 !c1) (Con !a2 !b2 !c2) =
+        let !a = a1 `add` a2
+            !b = b1 `add` b2
+            !c = c1 `add` c2
+        in Con a b c
+    {-# INLINE add #-}
 
 instance Ord RefLine where
     compare rf1 rf2 =
@@ -281,21 +309,24 @@ instance Ord RefLine where
         compare (rmirandaScore rf1) (rmirandaScore rf2) <>
         compare (rconserveScore rf1) (rconserveScore rf2) <>
         flip compare (totalSite rf1) (totalSite rf2)
-
+    {-# INLINE compare #-}
+    
 myCompare :: Ord a => Maybe a -> Maybe a -> Ordering
 myCompare Nothing Nothing = EQ
 myCompare (Just a1) (Just a2) = compare a1 a2
 myCompare (Just _) Nothing = LT
 myCompare Nothing (Just _) = GT
-      
+{-# INLINE myCompare #-}
+
 instance Ord MScore where
     compare ms1 ms2 =
         flip compare (structureScore ms1) (structureScore ms2) <>
         compare (freeEnergy ms1) (freeEnergy ms2)
-
+    {-# INLINE compare #-}
+    
 instance Ord Conservation where
     compare con1 con2 =
         flip compare (branchLength con1) (branchLength con2) <>
         flip myCompare (pct con1) (pct con2)
-        
+    {-# INLINE compare #-}        
 

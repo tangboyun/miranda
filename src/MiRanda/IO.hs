@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings,BangPatterns #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : 
@@ -14,7 +14,7 @@
 
 module MiRanda.IO where
 
-import           Data.Attoparsec.ByteString.Lazy
+import           Data.Attoparsec.ByteString.Char8
 import qualified Data.ByteString.Char8 as B8
 import           Data.ByteString.Lazy (ByteString)
 import           Data.ByteString.Lazy.Builder
@@ -39,7 +39,13 @@ import           MiRanda.Score
 import           Debug.Trace
 import           Control.Arrow
 import           Text.Printf
+import System.Exit
 
+stringentBranchLengthCutOff :: Double
+stringentBranchLengthCutOff = 0.5
+
+branchLengthCutOff :: Double
+branchLengthCutOff = 0.3
 
 -- | for debug use, most sites should be the same as targetscan 's out put
 toTargetScanOutFormat :: [SiteLine] -> [B8.ByteString]
@@ -82,11 +88,37 @@ toTargetScanOutFormat =
 
         
 toSiteLines :: [Record] -> [SiteLine]
-toSiteLines rs = concatMap snd $ getSites $ zip rs (getConservations rs)
+{-# INLINE toSiteLines #-}
+toSiteLines rs = concatMap snd $ getSites $ recordFilter $ zip rs (getConservations rs)
+
+recordFilter :: [(Record,[Conservation])] -> [(Record,[Conservation])]
+{-# INLINE recordFilter #-}
+recordFilter rcs =
+    filter ( not . null . snd) $
+    map
+    (\(!r,!cons) ->
+      let !ss = predictedSites r
+          (!ss',!cons') = unzip $
+                          filter
+                          (\(!s,!con) ->
+                            case contextScorePlus s of
+                                Nothing -> -- 6mer,6mer offset and imperfect seed match
+                                    if branchLength con >= stringentBranchLengthCutOff
+                                    then True
+                                    else False
+                                Just csp ->
+                                    if contextPlus csp < 0 &&
+                                       branchLength con >= branchLengthCutOff
+                                    then True
+                                    else False
+                          ) $ zip ss cons
+          !r' = r {predictedSites = ss'}
+      in (r',cons')
+    ) rcs
 
 toRefLines :: [Record] -> [RefLine]
-toRefLines rs = map mergeScore $ zip rs (getConservations rs)
-    
+toRefLines rs = map mergeScore $ recordFilter $ zip rs (getConservations rs)
+{-# INLINE toRefLines #-}    
 
 mkProcess :: FilePath -> FilePath -> IO CreateProcess
 mkProcess miRFile utrFile = do
@@ -110,10 +142,14 @@ miRNAPredict spe miFasta@(Fasta sid _) allUTRFile =
     writeMiR miFile miFasta
     dumpGenome spe allUTRFile utrFile
     proP <- mkProcess miFile utrFile
-    (_,Just outH,_,_) <- createProcess proP
-    mRs <- return . toMRecords =<< L8.hGetContents outH
-    utrSets <- readUTRs allUTRFile (map _mRNA mRs)
-    return $ toRecord spe mRs utrSets
+    (_,Just outH,_,pH) <- createProcess proP
+    mRs <- return . mRecordFilter . toMRecords =<< B8.hGetContents outH
+    ex <- waitForProcess pH
+    case ex of
+        ExitSuccess -> do
+            utrSets <- readUTRs allUTRFile $! map _mRNA mRs
+            return $ toRecord spe mRs utrSets
+        _ -> exitWith ex
 
 dumpGenome :: String -> FilePath -> FilePath -> IO ()
 dumpGenome specName inFile outFile =
@@ -126,40 +162,42 @@ dumpGenome specName inFile outFile =
   
 orgToTaxID :: String -> Int
 orgToTaxID s =
-  snd $ fromJust $ find (\(a,b) -> s == B8.unpack a) $
-  map (\(i,l) -> (commonName l,i)) $ IM.toList taxMap
+  snd $! fromJust $ find (\(a,b) -> s == B8.unpack a) $
+  map (\(i,l) -> (commonName l,i)) $! IM.toList taxMap
+{-# INLINE orgToTaxID #-}
 
 toRecord :: String -> [MRecord] -> [[UTR]] -> [Record]
+{-# INLINE toRecord #-}
 toRecord str mRs utrSets =
   zipWith f mRs utrSets
   where
-    toSites mR utr =
-      let mRL = mRNALen mR
+    toSites !mR !utr =
+      let !mRL = mRNALen mR
       in map
          (\mSite ->
-           let mS = _mScore mSite
-               rawS = getRawScore utr mRL mSite
-               st = _seedType mSite
-               cS = getContextScore st rawS
-               csP = getContextScorePlus st al rawS
-               sR = getSeedMatchSite mSite
-               uR = _mRNARange mSite
-               m = _match mSite
-               al = _align mSite
+           let !mS = _mScore mSite
+               !rawS = getRawScore utr mRL mSite
+               !st = _seedType mSite
+               !cS = getContextScore st rawS
+               !csP = getContextScorePlus st al rawS
+               !sR = getSeedMatchSite mSite
+               !uR = _mRNARange mSite
+               !m = _match mSite
+               !al = _align mSite
            in Site mS rawS cS csP sR uR m st al
          ) (sites mR)
       
-    f mR utrSet =
-      let utrID = _mRNA mR
-          miID = _miRNA mR
-          (lhs,rhs) = partition ((== orgToTaxID str) . taxonomyID) utrSet
-          ss = toSites mR (head lhs)
+    f !mR !utrSet =
+      let !utrID = _mRNA mR
+          !miID = _miRNA mR
+          (!lhs,!rhs) = partition ((== orgToTaxID str) . taxonomyID) utrSet
+          !ss = toSites mR (head lhs)
       in if null lhs
          then error $ (show mR ++ "\n\n" ++ show utrSet)
          else Record miID utrID (head lhs) (rhs) ss
           
 readUTRs :: FilePath -> [B8.ByteString] -> IO [[UTR]]
-readUTRs fp genes =
+readUTRs !fp !genes =
   L8.readFile fp >>=
   return . myFilter genes .
   groupBy ((==) `on` refSeqID) . toUTRs
@@ -171,23 +209,26 @@ readUTRs fp genes =
       then us : myFilter gs uss
       else myFilter ag uss
            
-toMRecords :: ByteString -> [MRecord]
-toMRecords = f . parse parseRecords . preprocess
+toMRecords :: B8.ByteString -> [MRecord]
+{-# INLINE toMRecords #-}
+toMRecords = f . flip feed "" . parse parseRecords . preprocess
   where
     f (Done _ r) = r
     f e = error $ show e
     
-preprocess :: ByteString -> ByteString
-preprocess = L8.intercalate "\n" . filter
+preprocess :: B8.ByteString -> B8.ByteString
+{-# INLINE preprocess #-}
+preprocess = B8.intercalate "\n" . filter
              (\l ->
-               L8.isPrefixOf "   " l ||
-               L8.isPrefixOf ">" l
+               B8.isPrefixOf "   " l ||
+               B8.isPrefixOf ">" l
                ) .
              dropWhile
              (/= "Current Settings:") .
-             L8.lines . L8.filter (/= '\r')
+             B8.lines . B8.filter (/= '\r')
 
 toUTRs :: ByteString -> [UTR]
+{-# INLINE toUTRs #-}
 toUTRs = map
          ((\(refId:_:syb:tax:sdata:[]) ->
             case L8.readInt tax of

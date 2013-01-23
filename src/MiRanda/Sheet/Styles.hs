@@ -41,3 +41,12 @@ annoCell = title { bgColor = Just lightpink }
 siteCell = title { bgColor = Just powderblue }
 conCell = title { bgColor = Just darkorange }
 poorCell = title { bgColor = Just violet }
+
+geneCell = title { bgColor = Just aquamarine }
+siteHeadCell = title { bgColor = Just thistle }
+titleCell = title { bgColor = Just lightsteelblue }
+contPlusCell = title { bgColor = Just mediumslateblue }
+contCell = title { bgColor = Just darkorchid }
+rawCell = title { bgColor = Just orchid }
+thermCell = title { bgColor = Just aquamarine }
+

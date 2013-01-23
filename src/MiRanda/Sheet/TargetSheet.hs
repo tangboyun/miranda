@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : 
@@ -10,7 +11,11 @@
 -- 
 --
 -----------------------------------------------------------------------------
-module MiRanda.Sheet.TargetSheet where
+module MiRanda.Sheet.TargetSheet
+       (
+           mkTargetWorkbook
+       )
+       where
 
 import           Data.ByteString.Char8 (ByteString)
 import qualified Data.ByteString.Char8 as B8
@@ -24,18 +29,18 @@ import Data.List
 import Data.Char
 import Text.Printf
 import MiRanda.IO
-import Control.Parallel.Strategies
 
 
 mkTargetWorkbook :: ByteString -> [Record] -> Workbook
 mkTargetWorkbook miID rs =
-    addS $
-    mkWorkbook $
-    [mkWorksheet (Name $ B8.unpack miID) $ 
-     mkTable $
-     headLine miID : classLine : mkRow nameCells # withStyleID "bold" :
-     map toRow (sort $ withStrategy (evalList rseq) $ toRefLines rs)
-    ]
+    let str = B8.unpack miID
+    in addS $
+       mkWorkbook $
+       [mkWorksheet (Name str) $ 
+        mkTable $
+        headLine str : classLine : mkRow nameCells # withStyleID "bold" :
+        (map toRow $ sort $ toRefLines rs)
+       ]
   where
     addS wb = wb
               # addStyle (Name "bold") boldCell
@@ -49,7 +54,7 @@ mkTargetWorkbook miID rs =
               # addStyle (Name "poor") poorCell
               
 headLine miID = mkRow
-                [string ("Target genes for " ++ B8.unpack miID)
+                [string ("Target genes for " ++ miID)
                  # mergeAcross (fromIntegral $ length nameCells - 1)
                  # withStyleID "head"
                 ]

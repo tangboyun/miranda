@@ -47,9 +47,10 @@ siteColor = darkorange
 w' = 1.75 * h
 h = 0.64
 w = 0.6 * h
-monoW = 0.6
+monoW = 0.70
 monoH = 1
 serifFont = "Times New Roman"
+monoFont = "Arial"
 
 conStr = "Conservation"
 
@@ -62,19 +63,19 @@ serifStr c str =
               # fc c <>
      rect (n * 0.5) monoH # lcA transparent
 
-cChar c = (alignedText 0.44 0.44 "C" # fc c <>
+cChar c = (alignedText 0.44 0.44 "C" # fc c # font monoFont <>
            rect w' h # lcA transparent) # centerXY
 
-tChar c = (alignedText 0.45 0.44 "T" # fc c <>
+tChar c = (alignedText 0.45 0.44 "T" # fc c # font monoFont <>
            rect w' h # lcA transparent) # centerXY
           
-uChar c = (alignedText 0.45 0.44 "U" # fc c <>
+uChar c = (alignedText 0.45 0.44 "U" # fc c # font monoFont <>
            rect w' h # lcA transparent) # centerXY
 
-gChar c = (alignedText 0.45 0.44 "G" # fc c <>
+gChar c = (alignedText 0.45 0.44 "G" # fc c # font monoFont <>
            rect w' h # lcA transparent) # centerXY
 
-aChar c = (alignedText 0.49 0.44 "A" # fc c <>
+aChar c = (alignedText 0.49 0.44 "A" # fc c # font monoFont <>
            rect w' h # lcA transparent) # centerXY
 
 char ch = text [ch] <>
@@ -260,7 +261,7 @@ plotMultiAlign seedRange siteRange utr utrs =
               printf "%d ~ %d : %d" a b c :: String
             ) . calcRange (exBeg,exEnd)) ss
       rLen = maximum $ map length rs            
-      dM = vcat $ fstLine : (tailLs ++ [strutY 0.5 === charStas])
+      dM = vcat $ fstLine : (tailLs ++ [strutY 0.8 === charStas])
       coef = 0.5
       lhs = vcat (map
                   (\nm ->
@@ -269,7 +270,7 @@ plotMultiAlign seedRange siteRange utr utrs =
                     # lcA transparent
                   ) names) ===
             (text con # font serifFont <>
-             rect (fromIntegral nameLen * coef) (0.5 + maxH)
+             rect (fromIntegral nameLen * coef) (0.8 + maxH)
              # lcA transparent
             )
       rhs = vcat (map
@@ -277,7 +278,7 @@ plotMultiAlign seedRange siteRange utr utrs =
                     text r # font serifFont <>
                     rect (fromIntegral rLen * coef) 1
                     # lcA transparent
-                  ) rs) === strutY (0.5 + maxH)
+                  ) rs) === strutY (0.8 + maxH)
   in pad 1.05 $ (lhs # alignB ||| dM # alignB ||| rhs # alignB) # centerXY
    
   where 
@@ -288,9 +289,9 @@ plotMultiAlign seedRange siteRange utr utrs =
           d3 = f b3 bp3
       in map charA bwBeg ++ d1 ++ d2 ++ d3 ++ map charA bwEnd
       where
-        charA ch = text [ch] <>
+        charA ch = text [ch] # font monoFont <>
                    rect monoW monoH # lcA transparent
-        charCP (ch,p) = text [ch] <>
+        charCP (ch,p) = text [ch] # font monoFont <>
                 rect monoW monoH # lcA transparent
                 # chooseColor
           where 
