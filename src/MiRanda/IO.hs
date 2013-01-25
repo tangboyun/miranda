@@ -36,7 +36,6 @@ import           System.FilePath
 import           System.IO
 import           System.Process
 import           MiRanda.Score
-import           Debug.Trace
 import           Control.Arrow
 import           Text.Printf
 import System.Exit
@@ -46,6 +45,8 @@ stringentBranchLengthCutOff = 0.5
 
 branchLengthCutOff :: Double
 branchLengthCutOff = 0.3
+
+-- TargetScan网站上的坐标是1based, NOT 0 based
 
 -- | for debug use, most sites should be the same as targetscan 's out put
 toTargetScanOutFormat :: [SiteLine] -> [B8.ByteString]

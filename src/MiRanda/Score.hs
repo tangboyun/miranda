@@ -237,12 +237,16 @@ getPairScore !s (Align !miR3' !mR5' !b) =
 
 getAUScoreImpl :: SeedType -> Pair -> ByteString -> AUScore
 {-# INLINE getAUScoreImpl #-}
-getAUScoreImpl !st (P !up' !dn) !utr =
+getAUScoreImpl !st (P !up' !dn') !utr =
   let !up = case st of
-          M8 -> up' - 1
-          M7M8 -> up' - 1
-          M6O -> up' - 1
-          _ -> up' - 2
+          M8 -> up' 
+          M7M8 -> up' 
+          M6O -> up'
+          _ -> up' - 1
+      !dn = case st of
+          M8 -> dn'
+          M7A1 -> dn'
+          _ -> dn' - 1
 
       (!us,!ds) = let ls = map (1/) [2.0..]
                       ls1 = 1:ls
@@ -272,7 +276,7 @@ getAUScoreImpl !st (P !up' !dn) !utr =
                          if c == 'A' || c == 'U'
                          then s
                          else 0) up30 us ++
-              zipWith (\c s ->
+               zipWith (\c s ->
                         if c == 'A' || c == 'U'
                         then s
                         else 0) dn30 ds

@@ -29,11 +29,13 @@ import Diagrams.Backend.Cairo.CmdLine
 import MiRanda.Score
 import Data.List
 import MiRanda.Sheet.TargetSheet
+import MiRanda.Sheet.SiteSheet
+
 spec = "Human"
 inF = "/home/tangboyun/Dropbox/miRanda Test Data/miRNA.fa"
-
-utrF = "/home/tangboyun/miRNAPrediction/UTR_Sequences.txt"
--- utrF = "/home/tangboyun/Dropbox/miRanda Test Data/testUTR.txt"
+inF' = "/tmp/testmiR.txt"
+-- utrF = "/home/tangboyun/miRNAPrediction/UTR_Sequences.txt"
+utrF = "/home/tangboyun/Dropbox/miRanda Test Data/testUTR.txt"
 geneIDs = ["LIN28B"]
 
 utrF' = "/tmp/testUTR.txt"
@@ -44,12 +46,12 @@ main = do
  -- let ls = L8.lines $ L8.filter (/= '\r') str
  --     str' = L8.intercalate "\n" $ head ls : filter ((`elem` geneIDs).(!! 2) . L8.split '\t') (tail ls)
  -- L8.writeFile utrF' str'
- fas <- readFasta inF
+ fas <- readFasta inF'
 -- rs <- 
 
 -- mapM_ (B8.putStrLn) $ toTargetScanOutFormat $ toSiteLines rs
 
- miRNAPredict spec (head fas) utrF >>= writeFile "/tmp/test.xml" . showSpreadsheet . mkTargetWorkbook "hsa-let-7i"
+ miRNAPredict spec (head fas) utrF' >>= writeFile "/tmp/test.xml" . showSpreadsheet . mkSiteWorkbook "hsa-let-7i"
 -- writeFile "Summary for predicted targets.xml" $ showSpreadsheet $
  --   mkTargetWorkbook (seqlabel fa) $ rs
 

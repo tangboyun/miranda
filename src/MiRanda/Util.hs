@@ -25,7 +25,6 @@ import Data.Function
 import Data.Maybe
 import Data.Monoid
 
-
 getGapRangeFromTrueRange :: Pair -> UTR -> (Int,Int)
 getGapRangeFromTrueRange !p !utr =
     let !seqStr = extractSeq utr
@@ -35,8 +34,14 @@ getGapRangeFromTrueRange !p !utr =
                            then 0 :: Int
                            else 1) $
                      B8.unpack $ seqStr
-        !rbeg = fromJust $ UV.findIndex (== (1+beg p)) charCount
-        !rend = fromJust $ UV.findIndex (== (end p)) charCount
+        !rbeg = case UV.findIndex (== (1+beg p)) charCount of
+            Nothing -> error $ "getGapRangeFromTrueRange: beg findIdx =" ++ show (1+beg p) ++ "\n" ++
+                       show p
+            Just x -> x
+            
+        !rend = case UV.findIndex (== (end p)) charCount of
+            Nothing -> error $ "getGapRangeFromTrueRange: end findIdx=" ++ show (end p)
+            Just x -> x
         !rend' = rend + 1
     in (rbeg,rend')
 {-# INLINE getGapRangeFromTrueRange #-}
@@ -56,8 +61,8 @@ getSpeciesWithSameSeedSeq !s !utr homos =
 groupHomoSpWithSeedType :: Site -> UTR -> [UTR] -> [(SeedType,[Int])]
 {-# INLINE groupHomoSpWithSeedType #-}
 groupHomoSpWithSeedType s utr homos =
-    let siteRange = utrRange s
-        sPair = getGapRangeFromTrueRange siteRange utr
+    let seedR = seedMatchRange s
+        sPair = getGapRangeFromTrueRange seedR utr
         miRStr = tToU . miRNASite3' . align $ s
     in  sortBy (compare `on` fst) $ map ((fst . head) &&& (map snd)) $
         map (map snd .
@@ -182,7 +187,8 @@ getSeedType (Align !miR3' !mR5' !b) =
           else if noGap && allMatch3_8
                then M6O
                else Imperfect
-
+                    
+-- 返回结合位点
 getSeedMatchSite :: MSite -> Pair
 {-# INLINE getSeedMatchSite #-}
 getSeedMatchSite !site =
@@ -191,14 +197,15 @@ getSeedMatchSite !site =
       !seed = _seedType site
       (!idxV,!n) = seedToIdx miR3'
       at = UV.unsafeIndex
-      P !i !j = case seed of
-                M8 -> P 0 7
-                M7A1 -> P 0 7
-                M7M8 -> P 1 7
-                M6   -> P 1 7
-                M6O  -> P 2 7
-                _    -> P 1 7
-  in P (down - idxV `at` j) (down - idxV `at` i)
+      (i,j) = case seed of
+                M8 -> (0, 7)
+                M7M8 -> (0, 7)
+                M7A1 -> (0, 6)
+                M6O -> (2, 7)
+                _    -> (1, 6)
+      num = 1 + idxV `at` j
+  in P (down - num) (down - idxV `at` i)
+
 
 getSiteSeqAtSeedMatch :: Align -> ByteString
 {-# INLINE getSiteSeqAtSeedMatch #-}
@@ -206,11 +213,11 @@ getSiteSeqAtSeedMatch al@(Align !miR3' !mR5' !b) =
   let (idxV,n) = seedToIdx miR3'
       !down = B8.length mR5'
       at = UV.unsafeIndex
-      P !i !j = case getSeedType al of
-                M8 -> P 0 7
-                M7A1 -> P 0 7
-                M7M8 -> P 1 7
-                M6   -> P 1 7
-                M6O  -> P 2 7
-                _    -> P 1 7
-  in extractStr ((down - idxV `at` j),(down - idxV `at` i)) mR5'
+      (i,j) = case getSeedType al of
+                M8 -> (0, 7)
+                M7M8 -> (0, 7) -- 7mer-m8 和 07年 paper上的不一样
+                M7A1 -> (0, 6)
+                M6O -> (2, 7)
+                _    -> (1, 6)
+      num = 1 + idxV `at` j
+  in extractStr ((down - num),(down - idxV `at` i)) mR5'

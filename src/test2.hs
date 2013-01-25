@@ -44,7 +44,7 @@ us = [["A2M"
 
 toUtr (gs:tax:sdata:[]) =
   let Just (i,_) = B8.readInt tax
-  in UTR gs i (GS sdata)
+  in UTR gs "" i (GS sdata)
           
 main = defaultMain $
        let dM = plotMultiAlign (P 39 46) (P 26 46) (toUtr u1) (map toUtr us)
