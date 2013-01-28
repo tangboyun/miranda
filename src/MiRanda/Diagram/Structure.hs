@@ -30,12 +30,15 @@ import qualified Data.Vector.Unboxed as UV
 import Text.Printf
 import Data.Function
 
-h = 1
-w = 0.6 * h
 
-char ch = text [ch] <> rect w h # lcA transparent
-charC c ch = text [ch] # fc c <> rect w h # lcA transparent
-charC' c ch = text [ch] # fc c # fontSize 0.5 <> rect (0.4*w) (0.5*h) # lcA transparent
+monoFont = "Consolas"
+
+h = 1
+w = 0.62 * h
+
+char ch = text [ch] # font monoFont <> rect w h # lcA transparent
+charC c ch = text [ch] # font monoFont  # fc c <> rect w h # lcA transparent
+charC' c ch = text [ch] # font monoFont # fc c # fontSize 0.5 <> rect (0.4*w) (0.5*h) # lcA transparent
 string = hcat . map char
 stringC c = hcat . map (charC c)
 
@@ -63,11 +66,14 @@ seedMatchStr l s =
            underLine
   where
     siteStr str = stringC siteColor str # centerXY
-    underLine = hrule (l * w) # lw 0.05 # lc siteColor
+    underLine = strutY 0.1 ===
+                hrule (l * w) # lw 0.05 # lc siteColor ===
+                strutY 0.1
 
 
 
 seedStr l = (hrule (l * w) # lw 0.05 # lc seedColor) ===
+            strutY 0.2 ===
             (stringC seedColor "Seed" # centerXY)
 
 
@@ -82,7 +88,7 @@ renderPair3' pair color =
                     in vcat [charC color c
                             ,d]
                   ) $ UV.toList pairV
-  in pairD # centerX === hrule (fromIntegral (length pair) * w) # lw 0.05 # lc color
+  in pairD # centerX === hrule (fromIntegral (length pair) * w) # lw 0.05 # lc color === strutY 0.2
      
 fun :: String -> [Int] -> UV.Vector (Char,Int)
 fun str ls =
@@ -132,14 +138,15 @@ renderUTR s ali@(Align miR3' utr5' b) (P up dn) =
                M8 -> (charC red $ head rhs) # alignB
                M7A1 -> (charC red $ head rhs) # alignB
                _    -> string rhs # alignB
-      str1 = string (printf "%6d  " (up+1)) # alignR ===
+      str1 = alignB $ string (printf "%6d  " (up+1)) # alignR ===
              string "5'-" # alignR
-      str2 = string (printf " %-6d  " dn) # alignL ===
+      str2 = alignB $ string (printf " %-6d  " dn) # alignL ===
              string "-3' UTR  " # alignL
-  in str1 # alignB ||| (string lhs |||  stringC sitePairColor pair ||| string loop) # alignB |||
-     (seedMatchStr (fromIntegral $ length seed) s # centerX ===
-      renderSeed5' seed s # centerX) # alignB ||| rhsD ||| str2 # alignB
-     
+      withLeft = alignB $ beside unit_X (renderSeed5' seed s)
+                 (string lhs |||  stringC sitePairColor pair ||| string loop)
+      whole = alignB $ seedMatchStr (fromIntegral $ length seed) s # centerX ===
+              beside unitX withLeft rhsD 
+  in centerXY $ str1 ||| whole ||| str2     
 
 renderBond ali@(Align miR3' utr5' b) =
   let (lhs:pair:loop:seed:rhs:[]) = splitPlaces (lengthOfEach ali) $
@@ -154,7 +161,7 @@ renderBond ali@(Align miR3' utr5' b) =
 
 
 renderBinding s p ali =
-  pad 1.05 $
+  centerXY $
   renderUTR s ali p # centerX ===
   renderBond ali # centerX ===
   renderMiRNA ali # centerX

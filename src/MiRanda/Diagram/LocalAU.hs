@@ -11,7 +11,11 @@
 -- 
 --
 -----------------------------------------------------------------------------
-module MiRanda.Diagram.LocalAU where
+module MiRanda.Diagram.LocalAU
+       (
+           plotLocalAU
+       )
+       where
 
 import Diagrams.Prelude hiding (sep)
 import           Data.Colour.Names
@@ -48,10 +52,10 @@ re (h,bool) = if bool
                    # fc black
                    # alignB
     
-sep = monoW * 0.05
+sep = monoW * 0.1
 
 -- input Seed site 
-plotLocalAU st (P up' dn') utr =
+plotLocalAU utr st (P up' dn') =
   let up = case st of
           M8 -> up' 
           M7M8 -> up' 

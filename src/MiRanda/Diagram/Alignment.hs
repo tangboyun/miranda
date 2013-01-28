@@ -151,7 +151,7 @@ diff (P up dn) str1' str2' =
   in foldl1 (+) $ map dif $
      zipWith ((*) `on` cToI) (B8.unpack str1) (B8.unpack str2)
            
-plotMultiAlign seedRange siteRange utr utrs =
+plotMultiAlign utr utrs seedRange siteRange =
   let ns = (map (commonName .
                  (taxMap `at`) .
                  taxonomyID) ss) ++ [conStr]
