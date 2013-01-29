@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns #-}
+{-# Language BangPatterns #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : 
@@ -35,7 +35,7 @@ calcBranchLength = flip go
     go :: [Label] -> NewickTree DefDecor -> Double
     go [] _ = 0
     go as tree =
-        if null $! intersect as (all_labels tree)
+        if null $ intersect as (all_labels tree)
         then 0
         else case tree of
             NTLeaf  (_,d) l ->
@@ -61,34 +61,34 @@ toBranchLength :: [Record] -> [(Double,Int)]
 toBranchLength records = map (func . ( utr &&& homoUTRs)) records
   where
     myMedian _ [] = 0
-    myMedian !l xs | odd l = xs !! ((l-1) `quot` 2)
-                   | otherwise = (\(a:b:[]) -> (a+b)/2) $! take 2 $
-                                 drop ((l `quot` 2) - 1) xs
+    myMedian l xs | odd l = xs !! ((l-1) `quot` 2)
+                  | otherwise = (\(a:b:[]) -> (a+b)/2) $! take 2 $
+                                drop ((l `quot` 2) - 1) xs
     at = B8.index
     extract = (show . taxonomyID) &&&
               (unGS . alignment)
-    allGapsAt !idxs (_,!spSeq) =  all (== '-') $
-                                  map (spSeq `at`) idxs
+    allGapsAt idxs (_,spSeq) =  all (== '-') $
+                                map (spSeq `at`) idxs
     {-# INLINE func #-}
-    func (!ref,!homo)=
-        let (!refID,!refSeq) = extract ref
-            !is = B8.findIndices (/= '-') refSeq
-            !n = B8.length refSeq - (B8.count '-' refSeq)
-            !ts = filter (not . allGapsAt is) .
+    func (ref,homo)=
+        let (refID,refSeq) = extract ref
+            is = B8.findIndices (/= '-') refSeq
+            n = B8.length refSeq - (B8.count '-' refSeq)
+            ts = filter (not . allGapsAt is) .
                  map extract $ homo
-            !bs = foldl'
+            bs = foldl'
                   (\acc idx ->
-                    let !refN = refSeq `at` idx
-                        !cs = sort $ map fst $
+                    let refN = refSeq `at` idx
+                        cs = sort $ map fst $
                               filter ((== refN) . (`at` idx) . snd) ts
                     in if null cs
                        then 0:acc
-                       else let !v = calcBranchLength newick (refID:cs)
+                       else let v = calcBranchLength newick (refID:cs)
                             in v:acc
                   ) [] is
-            !m = myMedian n $ sort bs
-            !i = if m == 0
-                 then 0
-                 else (length $! takeWhile (< m) branchLenThresholds) - 1
+            m = myMedian n $ sort bs
+            i = if m == 0
+                then 0
+                else (length $! takeWhile (< m) branchLenThresholds) - 1
         in (m,i)
 {-# INLINE toBranchLength #-}

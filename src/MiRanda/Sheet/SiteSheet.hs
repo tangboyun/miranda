@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : 
@@ -21,26 +22,36 @@ import qualified Data.ByteString.Char8 as B8
 import           Data.Colour.Names
 import           MiRanda.Sheet.Styles
 import           MiRanda.Types
+import MiRanda.Util
 import           Text.XML.SpreadsheetML.Builder
 import           Text.XML.SpreadsheetML.Types
 import           Text.XML.SpreadsheetML.Util
 import Data.List
 import Data.Char
 import Text.Printf
-import MiRanda.IO
+import MiRanda.Score
 import Data.Maybe
+import System.FilePath
+import Data.Monoid
 
-mkSiteWorkbook :: ByteString -> [Record] -> Workbook
-mkSiteWorkbook miID rs =
+toSiteLines :: [Record] -> [SiteLine]
+{-# INLINE toSiteLines #-}
+toSiteLines rs = concatMap snd $ getSites $ recordFilter $ zip rs (getConservations rs)
+
+
+mkSiteWorkbook :: String -> [Record] -> Workbook
+mkSiteWorkbook dDir rs | (not $ null rs) =
     let str = B8.unpack miID
+        miID = miRNA $ head rs
     in addS $
        mkWorkbook $
        [mkWorksheet (Name str) $ 
         mkTable $
         headLine str : classLine : mkRow nameCells # withStyleID "bold" :
 --        (map toRow $ sort $ toRefLines rs)
-        (map toRow $ toSiteLines rs)        
+        (map (toRow dDir) $ toSiteLines rs)        
        ]
+                       | otherwise = emptyWorkbook
   where
     addS wb = wb
               # addStyle (Name "bold") boldCell
@@ -66,7 +77,7 @@ classLine = mkRow
              # mergeAcross 1
              # withStyleID "gene"
             ,string "Site"
-             # mergeAcross 1
+             # mergeAcross 2
              # withStyleID "siteHead"             
             ,string "Context+ Score"
              # mergeAcross 6
@@ -90,8 +101,10 @@ nameCells = map string
             ["RefSeqID"
             ,"GeneSymbol"
 --            ,"UTR length"
+            ,"Diagrams"
             ,"Range"
             ,"Seed Match"
+             
             ,"Site-type Contribution"
             ,"3' Pairing Contribution"
             ,"Local AU Contribution"
@@ -114,9 +127,15 @@ nameCells = map string
             ,"IsConserved"]
 
 
-toRow :: SiteLine -> Row
-toRow sl =
+toRow :: String -> SiteLine -> Row
+toRow dDir sl =
   let (Gene s r) = geneID sl
+      mid = miRID sl
+      base = B8.unpack
+             (mid <> " vs " <>
+              r <> "(" <> s <> ")") <.> "pdf"
+      path = dDir </> base
+      showStr = "Click Me"
       csp = context_Score_Plus sl 
       c = context_Score sl
       raw = raw_Score sl
@@ -129,7 +148,8 @@ toRow sl =
       (P i j) = siteRange sl
   in mkRow $
      string (B8.unpack r) :
-     string (B8.unpack s) : 
+     string (B8.unpack s) :
+     href path showStr :
      string (show (i,j)) :
      string (show st) :
      fromMaybe emptyCell (fmap (myDouble . siteTypeContribPlus) csp) :

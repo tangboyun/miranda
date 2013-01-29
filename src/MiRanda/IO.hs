@@ -39,15 +39,48 @@ import           MiRanda.Score
 import           Control.Arrow
 import           Text.Printf
 import System.Exit
+import Control.Concurrent.Async
+import Text.XML.SpreadsheetML.Writer (showSpreadsheet)
+import MiRanda.Diagram
+import MiRanda.Sheet.TargetSheet
+import MiRanda.Sheet.SiteSheet
+import Control.Monad
+import System.Directory
 
-stringentBranchLengthCutOff :: Double
-stringentBranchLengthCutOff = 0.5
-
-branchLengthCutOff :: Double
-branchLengthCutOff = 0.3
-
+toOutPut :: FilePath -> [Record] -> IO ()
+toOutPut outPath rs =
+    let dDir = "Diagrams"
+        outP = outPath </> dDir
+        targetFile = outPath </> "Target Genes.xml"
+        siteFile = outPath </> "Target Sites.xml"
+    in do
+        mkdir outP
+        a1 <- async $
+              writeFile targetFile $ showSpreadsheet $
+              mkTargetWorkbook ("." </> dDir) rs
+        a2 <- async $
+              writeFile siteFile $ showSpreadsheet $
+              mkSiteWorkbook ("." </> dDir) rs
+        a3 <- async $
+              forM_ rs $ \r ->
+              let mid = miRNA r
+                  sy = geneSymbol $ utr r
+                  re = refSeqID $ utr r
+                  base = B8.unpack
+                         (mid <> " vs " <>
+                          re <> "(" <> sy <> ")") <.> "pdf"
+                  outF = outP </> base
+              in rend outF $ recordDiagram r
+                 
+        _ <- wait a1
+        _ <- wait a2
+        _ <- wait a3
+        return ()
+  where
+    mkdir fp = doesDirectoryExist fp >>=
+               flip unless (createDirectory fp) 
+    
 -- TargetScan网站上的坐标是1based, NOT 0 based
-
 -- | for debug use, most sites should be the same as targetscan 's out put
 toTargetScanOutFormat :: [SiteLine] -> [B8.ByteString]
 toTargetScanOutFormat =
@@ -88,38 +121,7 @@ toTargetScanOutFormat =
                "BL" <> "\t" <> "Pct" <> "\t" <> "IsConseved"
 
         
-toSiteLines :: [Record] -> [SiteLine]
-{-# INLINE toSiteLines #-}
-toSiteLines rs = concatMap snd $ getSites $ recordFilter $ zip rs (getConservations rs)
 
-recordFilter :: [(Record,[Conservation])] -> [(Record,[Conservation])]
-{-# INLINE recordFilter #-}
-recordFilter rcs =
-    filter ( not . null . snd) $
-    map
-    (\(!r,!cons) ->
-      let !ss = predictedSites r
-          (!ss',!cons') = unzip $
-                          filter
-                          (\(!s,!con) ->
-                            case contextScorePlus s of
-                                Nothing -> -- 6mer,6mer offset and imperfect seed match
-                                    if branchLength con >= stringentBranchLengthCutOff
-                                    then True
-                                    else False
-                                Just csp ->
-                                    if contextPlus csp < 0 &&
-                                       branchLength con >= branchLengthCutOff
-                                    then True
-                                    else False
-                          ) $ zip ss cons
-          !r' = r {predictedSites = ss'}
-      in (r',cons')
-    ) rcs
-
-toRefLines :: [Record] -> [RefLine]
-toRefLines rs = map mergeScore $ recordFilter $ zip rs (getConservations rs)
-{-# INLINE toRefLines #-}    
 
 mkProcess :: FilePath -> FilePath -> IO CreateProcess
 mkProcess miRFile utrFile = do

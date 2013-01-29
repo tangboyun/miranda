@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns,OverloadedStrings #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : 
@@ -22,25 +22,35 @@ import qualified Data.ByteString.Char8 as B8
 import           Data.Colour.Names
 import           MiRanda.Sheet.Styles
 import           MiRanda.Types
+import MiRanda.Util
 import           Text.XML.SpreadsheetML.Builder
 import           Text.XML.SpreadsheetML.Types
 import           Text.XML.SpreadsheetML.Util
 import Data.List
 import Data.Char
 import Text.Printf
-import MiRanda.IO
+import MiRanda.Score
+import System.FilePath
+import Data.Monoid
+
+toRefLines :: [Record] -> [RefLine]
+toRefLines rs = map mergeScore $ recordFilter $ zip rs (getConservations rs)
+{-# INLINE toRefLines #-}    
 
 
-mkTargetWorkbook :: ByteString -> [Record] -> Workbook
-mkTargetWorkbook miID rs =
+mkTargetWorkbook :: String -> [Record] -> Workbook
+mkTargetWorkbook dDir rs | (not $ null rs) =
     let str = B8.unpack miID
+        miID = miRNA $ head rs
     in addS $
        mkWorkbook $
        [mkWorksheet (Name str) $ 
         mkTable $
         headLine str : classLine : mkRow nameCells # withStyleID "bold" :
-        (map toRow $ sort $ toRefLines rs)
+--        (map (toRow dDir) $ sort $ toRefLines rs)
+        (map (toRow dDir) $ toRefLines rs)        
        ]
+                         | otherwise = emptyWorkbook
   where
     addS wb = wb
               # addStyle (Name "bold") boldCell
@@ -63,7 +73,9 @@ headLine miID = mkRow
 classLine = mkRow
             [emptyCell
             ,emptyCell
-            ,string "Sites" # withStyleID "site"
+            ,string "Sites"
+             # withStyleID "site"
+             # mergeAcross 1
             ,string "TargetScan"
              # mergeAcross 1 -- context+ context
              # withStyleID "tsScore"
@@ -86,6 +98,7 @@ classLine = mkRow
 
 nameCells = [string "RefSeqID"
             ,string "GeneSymbol"
+            ,string "Diagrams"
             ,string "Total"
             ,string "Context+"
             ,string "Context"
@@ -110,9 +123,15 @@ nameCells = [string "RefSeqID"
             ]
 
 
-toRow :: RefLine -> Row
-toRow rl =
+toRow :: String -> RefLine -> Row
+toRow dDir rl =
   let (Gene s r) = rgene rl
+      mid = rmiRID rl
+      base = B8.unpack
+             (mid <> " vs " <>
+              r <> "(" <> s <> ")") <.> "pdf"
+      path = dDir </> base
+      showStr = "Click Me"
       ns = fromIntegral $ totalSite rl
       csp = case rcontextScorePlus rl of
           Just cp -> myDouble $ contextPlus cp
@@ -130,6 +149,7 @@ toRow rl =
   in mkRow $
      string (B8.unpack r) :
      string (B8.unpack s) :
+     href path showStr :
      number ns : csp : c :
      myDouble stru : myDouble free :
      myDouble bl : pc :

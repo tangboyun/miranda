@@ -173,9 +173,9 @@ plotMultiAlign utr utrs seedRange siteRange =
           B8.unpack $ seqStr
       strLen = UV.maximum s
       seedBeg = fromJust $ UV.findIndex (== (1+beg seedRange)) s
-      seedEnd = fromJust $ UV.findIndex (== (end seedRange)) s
+      seedEnd = 1+fromJust $ UV.findIndex (== (end seedRange)) s
       siteBeg = fromJust $ UV.findIndex (== (1+beg siteRange)) s
-      siteEnd = fromJust $ UV.findIndex (== (1+end siteRange)) s
+      siteEnd = 1+fromJust $ UV.findIndex (== (end siteRange)) s
       siteLen = siteEnd - siteBeg
       (exBeg,exEnd) = if siteLen < 60
                       then let b = ceiling $ (60 - fromIntegral siteLen) / 2
@@ -279,7 +279,7 @@ plotMultiAlign utr utrs seedRange siteRange =
                     rect (fromIntegral rLen * coef) 1
                     # lcA transparent
                   ) rs) === strutY (0.8 + maxH)
-  in pad 1.05 $ (lhs # alignB ||| dM # alignB ||| rhs # alignB) # centerXY
+  in (lhs # alignB ||| dM # alignB ||| rhs # alignB) # centerXY
    
   where 
     plotOneChain (bp1:bp2:bp3:[]) (bwBeg:b1:b2:b3:bwEnd:[]) =

@@ -29,6 +29,7 @@ import Data.Function
 import MiRanda.Score
 import MiRanda.Diagram.LocalAU
 import Diagrams.Backend.Cairo
+import Diagrams.Backend.Cairo.Internal
 
 hW = 0.6
 hH = 1
@@ -53,9 +54,18 @@ tableHeader =
     ,"Conservation"
     ,"Predicted By"
     ]
+    
+-- 8.27 inch , cairo default dpi = 72
+widthA4 = Width 600
+heightA4 = Height 840
+    
+rend :: FilePath -> Diagram Cairo R2 -> IO ()
+rend outFile d =
+    fst $ renderDia Cairo (CairoOptions outFile widthA4 PDF False) d
 
-renderRecord :: Record -> Diagram Cairo R2
-renderRecord re =
+
+recordDiagram :: Record -> Diagram Cairo R2
+recordDiagram re =
     let ss = sortBy (compare `on` utrRange) $ predictedSites re
         u = utr re
         us = homoUTRs re
@@ -64,15 +74,15 @@ renderRecord re =
                let seedR = seedMatchRange s
                    siteR = utrRange s
                in plotMultiAlign u us seedR siteR # centerXY) ss
-        t = renderTable re
-        vsep = 2
+        t = tableDiagram re
+        vsep = 1
         aPlot = scale (wt / wa) $ vcat' (CatOpts Cat vsep Proxy) as
         wt = width t
         wa = maximum $ map width (as :: [Diagram Cairo R2])
-    in t === strutY 2 === aPlot
+    in pad 1.01 $ t === strutY 1 === aPlot
 
-renderTable :: Record -> Diagram Cairo R2
-renderTable re =
+tableDiagram :: Record -> Diagram Cairo R2
+tableDiagram re =
     let ss = sortBy (compare `on` utrRange) $ predictedSites re
         thisUTR = B8.filter isAlpha $ extractSeq $ utr re
         cons = head $ getConservations [re]
@@ -126,7 +136,7 @@ renderTable re =
                      # lcA transparent
                      # fc bgColor
                    )) ds
-        vsep = 0.1
-        hsep = 0.1
+        vsep = 0.2
+        hsep = 0.2
     in centerXY $ vcat' (CatOpts Cat vsep Proxy) $ map (hcat' (CatOpts Cat hsep Proxy)) $ hs : dss
 

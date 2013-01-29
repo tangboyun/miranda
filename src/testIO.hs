@@ -28,14 +28,14 @@ import Diagrams.Prelude hiding (align)
 import Diagrams.Backend.Cairo.CmdLine
 import MiRanda.Score
 import Data.List
-import MiRanda.Sheet.TargetSheet
-import MiRanda.Sheet.SiteSheet
+-- import MiRanda.Sheet.TargetSheet
+-- import MiRanda.Sheet.SiteSheet
 import MiRanda.Diagram
 spec = "Human"
 inF = "/home/tangboyun/Dropbox/miRanda Test Data/miRNA.fa"
-inF' = "/tmp/testmiR.txt"
--- utrF = "/home/tangboyun/miRNAPrediction/UTR_Sequences.txt"
-utrF = "/home/tangboyun/Dropbox/miRanda Test Data/testUTR.txt"
+--inF' = "/tmp/testmiR.txt"
+utrF = "/home/tangboyun/miRNAPrediction/UTR_Sequences.txt"
+--utrF = "/home/tangboyun/Dropbox/miRanda Test Data/testUTR.txt"
 geneIDs = ["LIN28B"]
 
 utrF' = "/tmp/testUTR.txt"
@@ -51,10 +51,12 @@ main = do
  
 -- mapM_ (B8.putStrLn) $ toTargetScanOutFormat $ toSiteLines rs
 
--- miRNAPredict spec (head fas) utrF' >>= writeFile "/tmp/test.xml" . showSpreadsheet . mkSiteWorkbook "hsa-let-7i"
- rs <- miRNAPredict spec (head fas) utrF
- defaultMain $
-     renderRecord $ head rs
+-- miRNAPredict spec (head fas) utrF >>= writeFile "/tmp/test.xml" . showSpreadsheet . mkSiteWorkbook "hsa-let-7i"
+-- miRNAPredict spec (head fas) utrF >>= writeFile "/tmp/test.xml" . showSpreadsheet . mkTargetWorkbook "Diagrams"
+ miRNAPredict spec (head fas) utrF >>= toOutPut "/tmp/testMiR" 
+-- rs <- miRNAPredict spec (head fas) utrF
+
+-- rend "testTable.pdf" (recordDiagram $ head rs)
 -- writeFile "Summary for predicted targets.xml" $ showSpreadsheet $
  --   mkTargetWorkbook (seqlabel fa) $ rs
 

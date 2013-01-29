@@ -25,34 +25,64 @@ import Data.Function
 import Data.Maybe
 import Data.Monoid
 
+recordFilter :: [(Record,[Conservation])] -> [(Record,[Conservation])]
+{-# INLINE recordFilter #-}
+recordFilter rcs =
+    filter ( not . null . snd) $
+    map
+    (\(r,cons) ->
+      let ss = predictedSites r
+          (ss',cons') = unzip $
+                          filter
+                          (\(s,con) ->
+                            case contextScorePlus s of
+                                Nothing -> -- 6mer,6mer offset and imperfect seed match
+                                    if branchLength con >= stringentBranchLengthCutOff
+                                    then True
+                                    else False
+                                Just csp ->
+                                    if contextPlus csp < 0 &&
+                                       branchLength con >= branchLengthCutOff
+                                    then True
+                                    else False
+                          ) $ zip ss cons
+          r' = r {predictedSites = ss'}
+      in (r',cons')
+    ) rcs
+  where 
+    stringentBranchLengthCutOff :: Double
+    stringentBranchLengthCutOff = 0.5
+    branchLengthCutOff :: Double
+    branchLengthCutOff = 0.3
+
 getGapRangeFromTrueRange :: Pair -> UTR -> (Int,Int)
-getGapRangeFromTrueRange !p !utr =
-    let !seqStr = extractSeq utr
-        !charCount = UV.postscanl (+) 0 $ UV.fromList $
+getGapRangeFromTrueRange p utr =
+    let seqStr = extractSeq utr
+        charCount = UV.postscanl (+) 0 $ UV.fromList $
                      map (\c ->
                            if c == '-'
                            then 0 :: Int
                            else 1) $
                      B8.unpack $ seqStr
-        !rbeg = case UV.findIndex (== (1+beg p)) charCount of
+        rbeg = case UV.findIndex (== (1+beg p)) charCount of
             Nothing -> error $ "getGapRangeFromTrueRange: beg findIdx =" ++ show (1+beg p) ++ "\n" ++
                        show p
             Just x -> x
             
-        !rend = case UV.findIndex (== (end p)) charCount of
+        rend = case UV.findIndex (== (end p)) charCount of
             Nothing -> error $ "getGapRangeFromTrueRange: end findIdx=" ++ show (end p)
             Just x -> x
-        !rend' = rend + 1
+        rend' = rend + 1
     in (rbeg,rend')
 {-# INLINE getGapRangeFromTrueRange #-}
 
 -- | 仅返回homos中的taxID,当seedType为8mer以外时,调用该函数决定BL
 getSpeciesWithSameSeedSeq :: Site -> UTR -> [UTR] -> [Int]
-getSpeciesWithSameSeedSeq !s !utr homos =
-    let !seedR = seedMatchRange s
-        !seqStr = extractSeq utr
-        !sPair = getGapRangeFromTrueRange seedR utr
-        !seed = extractStr sPair seqStr
+getSpeciesWithSameSeedSeq s utr homos =
+    let seedR = seedMatchRange s
+        seqStr = extractSeq utr
+        sPair = getGapRangeFromTrueRange seedR utr
+        seed = extractStr sPair seqStr
     in map snd $ filter ((== seed) . fst) $
        map ((extractStr sPair . extractSeq) &&& taxonomyID) homos
 {-# INLINE getSpeciesWithSameSeedSeq #-}
@@ -110,7 +140,7 @@ tToU = B8.map ((\c -> if c == 'T'
 {-# INLINE tToU #-}       
         
 extractStr :: (Int,Int) -> ByteString -> ByteString
-extractStr (!i,!j) = B8.take (j-i) . B8.drop i
+extractStr (i,j) = B8.take (j-i) . B8.drop i
 {-# INLINE extractStr #-}
 
 extractSeq :: UTR -> ByteString
@@ -132,16 +162,16 @@ extractSeedN8 (Align miR _ _) = extractSeedN8FromBS miR
 seedToIdx :: ByteString -> (UV.Vector Int,Int)
 {-# INLINE seedToIdx #-}
 seedToIdx miR3' =
-  let !miR = B8.reverse miR3'
-      !nS  = B8.length seed
-      !seed = flip B8.take miR $
+  let miR = B8.reverse miR3'
+      nS  = B8.length seed
+      seed = flip B8.take miR $
               (1 +) $ last $ take 8 $
               B8.findIndices isAlpha miR
-      !sVec = UV.fromList $ B8.unpack seed
+      sVec = UV.fromList $ B8.unpack seed
   in (UV.findIndices isAlpha sVec,nS)
 
 
-lengthOfEach (Align !miR3' _ _) =
+lengthOfEach (Align miR3' _ _) =
   let miR = B8.reverse miR3'
       at = UV.unsafeIndex
       idxV = UV.fromList $
@@ -155,7 +185,7 @@ lengthOfEach (Align !miR3' _ _) =
 
 getSeedType :: Align -> SeedType
 {-# INLINE getSeedType #-}
-getSeedType (Align !miR3' !mR5' !b) = 
+getSeedType (Align miR3' mR5' b) = 
   let (idxV,nS) = seedToIdx miR3'
       idxV' = UV.fromList [0..7]
       site = UV.fromList $
@@ -191,11 +221,11 @@ getSeedType (Align !miR3' !mR5' !b) =
 -- 返回结合位点
 getSeedMatchSite :: MSite -> Pair
 {-# INLINE getSeedMatchSite #-}
-getSeedMatchSite !site =
-  let P _ !down = _mRNARange site
-      (Align !miR3' !mR5' !b) = _align site
-      !seed = _seedType site
-      (!idxV,!n) = seedToIdx miR3'
+getSeedMatchSite site =
+  let P _ down = _mRNARange site
+      (Align miR3' mR5' b) = _align site
+      seed = _seedType site
+      (idxV,n) = seedToIdx miR3'
       at = UV.unsafeIndex
       (i,j) = case seed of
                 M8 -> (0, 7)
@@ -209,9 +239,9 @@ getSeedMatchSite !site =
 
 getSiteSeqAtSeedMatch :: Align -> ByteString
 {-# INLINE getSiteSeqAtSeedMatch #-}
-getSiteSeqAtSeedMatch al@(Align !miR3' !mR5' !b) =
+getSiteSeqAtSeedMatch al@(Align miR3' mR5' b) =
   let (idxV,n) = seedToIdx miR3'
-      !down = B8.length mR5'
+      down = B8.length mR5'
       at = UV.unsafeIndex
       (i,j) = case getSeedType al of
                 M8 -> (0, 7)

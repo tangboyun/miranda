@@ -52,7 +52,7 @@ re (h,bool) = if bool
                    # fc black
                    # alignB
     
-sep = monoW * 0.1
+sep = monoW * 0.2
 
 -- input Seed site 
 plotLocalAU utr st (P up' dn') =
@@ -99,8 +99,15 @@ plotLocalAU utr st (P up' dn') =
                      if c == 'A' || c == 'U'
                      then True
                      else False) dn30
-  in centerXY $ localU ||| strutX sep |||
-     (stringM seedColor monoFont str # centerX ===
-      stringS fColor serifFont (show st) # centerX) # centerXY |||
-     strutX sep ||| localD
+      lhs = localU ||| strutX sep
+      rhs = strutX sep ||| localD
+      middle = stringM seedColor monoFont str # centerX # alignB
+      step1 = beside unit_X middle lhs
+      step2 = beside unitX step1 rhs
+  in centerXY $ step2 === stringS fColor serifFont (show st) # centerX
+
+   -- centerXY $ localU ||| strutX sep |||
+   --   (stringM seedColor monoFont str # centerX ===
+   --    stringS fColor serifFont (show st) # centerX) # centerXY |||
+   --   strutX sep ||| localD
      

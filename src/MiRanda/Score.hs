@@ -337,56 +337,56 @@ getSPSTA !st !seedWithN8 =
 {-# INLINE getSPSTA #-}         
 
 getContextScorePlus :: SeedType -> Align -> RawScore -> Maybe ContextScorePlus
-getContextScorePlus !st !ali !rawScore =
-  let !seedWithN8 = extractSeedN8 ali
-      (!spsScore,!taScore) = getSPSTA st seedWithN8
-      (PairScore !paS) = pairingScore rawScore
-      (AUScore !auS) = auScore rawScore
-      (PosScore !psS) = posScore rawScore
-      !spsS = case spsScore of
+getContextScorePlus st ali rawScore =
+  let seedWithN8 = extractSeedN8 ali
+      (spsScore,taScore) = getSPSTA st seedWithN8
+      (PairScore paS) = pairingScore rawScore
+      (AUScore auS) = auScore rawScore
+      (PosScore psS) = posScore rawScore
+      spsS = case spsScore of
                Nothing -> Nothing
                Just (SPScore s) -> Just s
-      !taS = case taScore of
+      taS = case taScore of
               Nothing -> Nothing
               Just (TAScore t) -> Just t
-      !paS' = fun <$> pure paS <*>
+      paS' = fun <$> pure paS <*>
               paMinMaxMap ! fromEnum st <*>
               paRegMeanMap ! fromEnum st
-      !auS' = fun <$> pure auS <*>
+      auS' = fun <$> pure auS <*>
               auMinMaxMap ! fromEnum st <*>
               auRegMeanMap ! fromEnum st
-      !psS' = fun <$> pure psS <*>
+      psS' = fun <$> pure psS <*>
               psMinMaxMap ! fromEnum st <*>
               psRegMeanMap ! fromEnum st
-      !spsS' = fun <$> spsS <*>
+      spsS' = fun <$> spsS <*>
                spsMinMaxMap ! fromEnum st <*>
                spsRegMeanMap ! fromEnum st
-      !taS' = fun <$> taS <*>
+      taS' = fun <$> taS <*>
               taMinMaxMap ! fromEnum st <*>
               taRegMeanMap ! fromEnum st
-      !fcS = fcMap ! fromEnum st
-      !csp = foldl1' (\a b -> (+) <$> a <*> b)
+      fcS = fcMap ! fromEnum st
+      csp = foldl1' (\a b -> (+) <$> a <*> b)
              [fcS,paS',auS',psS',spsS',taS']
   in CSP <$> csp <*> paS' <*> auS' <*> psS' <*>
              taS' <*> spsS' <*> fcS
   where
-    fun !s (!minV,!maxV) (!reg,!mean) =
+    fun s (minV,maxV) (reg,mean) =
       let s' = (s - minV) / (maxV - minV)
       in reg * (s' - mean)
 {-# INLINE getContextScorePlus #-}
 
 mergeScore :: (Record,[Conservation]) -> RefLine
-mergeScore (!r,cs) =
+mergeScore (r,cs) =
     let ss = predictedSites r
-        !totalM = foldl1' add $ map miRandaScore ss
-        !totalCon = foldl1' add cs
-        !totalR = foldl1' add $ map rawScore ss
-        !totalCS = foldl1' add $ map contextScore ss
-        !totalCSP = foldl1' add $ map contextScorePlus ss
-        !totalS = length ss
-        (!conSite,!nonConSite) =
+        totalM = foldl1' add $ map miRandaScore ss
+        totalCon = foldl1' add cs
+        totalR = foldl1' add $ map rawScore ss
+        totalCS = foldl1' add $ map contextScore ss
+        totalCSP = foldl1' add $ map contextScorePlus ss
+        totalS = length ss
+        (conSite,nonConSite) =
             foldl'
-            (\(con@(!a1,!b1,!c1,!d1,!e1,!f1),nonCon@(!a2,!b2,!c2,!d2,!e2,!f2)) (!s,!c) ->
+            (\(con@(!a1,!b1,!c1,!d1,!e1,!f1),nonCon@(!a2,!b2,!c2,!d2,!e2,!f2)) (s,c) ->
               if isConserved c
               then let !con' = case seedType s of
                            M8 -> (a1+1,b1,c1,d1,e1,f1)
@@ -405,10 +405,10 @@ mergeScore (!r,cs) =
                            Imperfect -> (a2,b2,c2,d2,e2,f2+1)
                    in (con,nonCon')
             ) ((0,0,0,0,0,0),(0,0,0,0,0,0)) $ zip ss cs
-        !ut = utr r
-        !u = B8.filter isAlpha . extractSeq . utr $ r
-        !ul = B8.length u
-        !g = Gene (geneSymbol ut) (refSeqID ut)
+        ut = utr r
+        u = B8.filter isAlpha . extractSeq . utr $ r
+        ul = B8.length u
+        g = Gene (geneSymbol ut) (refSeqID ut)
     in RL (miRNA r) g totalM totalCon totalR totalCS
        totalCSP totalS conSite nonConSite ul u
 {-# INLINE mergeScore #-}        
@@ -416,20 +416,20 @@ mergeScore (!r,cs) =
 getSites :: [(Record,[Conservation])] -> [(Record,[SiteLine])]
 {-# INLINE getSites #-}
 getSites [] = []
-getSites ((!r,!cons):rs) =
-    let !ss = predictedSites r
-        !mi = miRNA r
-        !u = utr r
-        !g = Gene (geneSymbol u) (refSeqID u)
-        !sls = map (\(!con,!s) ->
-                     let !raw = rawScore s
-                         !mS = miRandaScore s
-                         !conS = contextScore s
-                         !conSP = contextScorePlus s
-                         !seedM = seedMatchRange s
-                         !siteM = utrRange s
-                         !st = seedType s
-                         !al = align s
+getSites ((r,cons):rs) =
+    let ss = predictedSites r
+        mi = miRNA r
+        u = utr r
+        g = Gene (geneSymbol u) (refSeqID u)
+        sls = map (\(con,s) ->
+                     let raw = rawScore s
+                         mS = miRandaScore s
+                         conS = contextScore s
+                         conSP = contextScorePlus s
+                         seedM = seedMatchRange s
+                         siteM = utrRange s
+                         st = seedType s
+                         al = align s
                     in SL mi g mS con raw conS conSP seedM siteM st al
                   ) $ zip cons ss
     in (r,sls): getSites rs
