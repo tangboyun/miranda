@@ -105,7 +105,7 @@ tableDiagram re =
                      else false
                    ) cons 
         col5 = map
-               (\s ->
+               (\s -> -- contextScorePlus 有定义，且小于0,3种主要seed match
                  pad 1.05 $
                  case seedType s of
                      M6 -> onlyM
