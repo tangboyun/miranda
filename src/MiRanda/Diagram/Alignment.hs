@@ -165,7 +165,8 @@ plotMultiAlign utr utrs seedRange siteRange =
       con   = last nameStrs
       utrs' = sortBy
               (compare `on`
-               ((diff (P siteBeg siteEnd) (extractSeq utr)) . extractSeq)) $
+               ((diff (P exBeg exEnd) (extractSeq utr)) . extractSeq)) $ -- 以整个plot片段最近邻排序              
+--               ((diff (P siteBeg siteEnd) (extractSeq utr)) . extractSeq)) $ -- 以site位点最近邻排序
               utrs
       seqStr = extractSeq utr
       ss = utr:utrs'
