@@ -83,9 +83,9 @@ recordDiagram re =
 
 tableDiagram :: Record -> Diagram Cairo R2
 tableDiagram re =
-    let ss = sortBy (compare `on` utrRange) $ predictedSites re
+    let (ss,cons) = unzip $ sortBy (compare `on` (utrRange.fst)) $
+                    zip (predictedSites re) (head $ getConservations [re])
         thisUTR = B8.filter isAlpha $ extractSeq $ utr re
-        cons = head $ getConservations [re]
         utrLen = B8.length thisUTR
         col1 = map
                (\s ->
