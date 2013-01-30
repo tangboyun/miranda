@@ -71,7 +71,7 @@ atV = (V.!)
 
 calcPct :: Double -> (Double,Double,Double,Double) -> Double
 {-# INLINE calcPct #-}
-calcPct !bl !(b0,b1,b2,b3) = max 0 $! b0 + b1 / ( 1 + exp (negate b2 * bl + b3)) 
+calcPct bl (b0,b1,b2,b3) = max 0 $ b0 + b1 / ( 1 + exp (negate b2 * bl + b3)) 
     
 
 binTreeVec :: V.Vector (NewickTree DefDecor)
@@ -89,7 +89,7 @@ binTreeVec = V.fromList $
              ,treeBin10]
 
 checkConservation :: SeedType -> Double -> Bool
-checkConservation !st !bl =
+checkConservation st bl =
     case st of
         M8 -> bl >= 0.8
         M7M8 -> bl >= 1.3
@@ -100,7 +100,7 @@ getConservations :: [Record] -> [[Conservation]]
 {-# INLINE getConservations #-}
 getConservations records = go $ zip records (toBranchLength records)
   where
-    hashMapLookup !st !seedStr =
+    hashMapLookup st seedStr =
         let h1 = H.fromList pct8mer
             h2 = H.fromList pct7merm8
             h3 = H.fromList pct7mer1a
@@ -111,54 +111,54 @@ getConservations records = go $ zip records (toBranchLength records)
             _ -> Nothing
     go [] = []
     go ((r,(_,binIdx)):res) =
-        let !thisUTR = utr r
-            !thisID = show . taxonomyID $ thisUTR
-            !otherUTRs = homoUTRs r
-            !sites = predictedSites r
-            !cons = map
+        let thisUTR = utr r
+            thisID = show . taxonomyID $ thisUTR
+            otherUTRs = homoUTRs r
+            sites = predictedSites r
+            cons = map
                     (\s ->
-                      let !seed = extractSeedN8 . align $ s
-                          !sT = seedType s
-                          !tree = binTreeVec `atV` binIdx
+                      let seed = extractSeedN8 . align $ s
+                          sT = seedType s
+                          tree = binTreeVec `atV` binIdx
                       in if sT /= M8
-                         then let !homoIDs = map show $!
+                         then let homoIDs = map show $!
                                              getSpeciesWithSameSeedSeq s
                                              thisUTR otherUTRs
-                                  !bl = if null homoIDs
+                                  bl = if null homoIDs
                                         then 0
                                         else calcBranchLength tree (thisID:homoIDs)
-                                  !isC = checkConservation sT bl
+                                  isC = checkConservation sT bl
                              in Con isC bl $! fmap (calcPct bl) $!
                                 hashMapLookup sT seed
-                        else let !stSps = groupHomoSpWithSeedType s thisUTR otherUTRs
-                                 !bls = -- trace (show stSps) $
-                                     map
-                                     (\(!stype,!ids) ->
+                         else let stSps = groupHomoSpWithSeedType s thisUTR otherUTRs
+                                  bls = -- trace (show stSps) $
+                                      map
+                                      (\(stype,ids) ->
                                        -- maybe include current id here ?
-                                       let !bl = if length ids == 1
+                                        let bl = if length ids == 1
                                                  then 0
                                                  else calcBranchLength tree $
                                                       map show ids
-                                           !isC = checkConservation stype bl
-                                       in (stype,bl,isC)
-                                     ) stSps
-                                 (_,!bl,!isC) = if null bls
-                                                then (M6,0,False)
-                                                else foldl1'
-                                                     (\(!a@(_,_,!b1)) (!b@(_,_,b2)) ->
-                                                       if b1
-                                                       then a
-                                                       else if b2
-                                                            then b
-                                                            else a) bls
-                                 !thisPCT = if null bls
+                                            isC = checkConservation stype bl
+                                        in (stype,bl,isC)
+                                      ) stSps
+                                  (_,bl,isC) = if null bls
+                                               then (M6,0,False)
+                                               else foldl1'
+                                                    (\(a@(_,_,b1)) (b@(_,_,b2)) ->
+                                                      if b1
+                                                      then a
+                                                      else if b2
+                                                           then b
+                                                           else a) bls
+                                  thisPCT = if null bls
                                             then Nothing
-                                            else last $! sort $
-                                                 map (\(!stype,!thisBL,_) ->
-                                                       fmap (calcPct thisBL) $!
+                                            else last $ sort $
+                                                 map (\(stype,thisBL,_) ->
+                                                       fmap (calcPct thisBL) $
                                                        hashMapLookup stype seed
                                                      ) bls
-                             in Con isC bl thisPCT) sites
+                              in Con isC bl thisPCT) sites
         in cons : go res
 
 
@@ -167,88 +167,88 @@ getConservations records = go $ zip records (toBranchLength records)
 {-# INLINE (!) #-}
 
 getRawScore :: UTR -> Int -> MSite -> RawScore
-getRawScore !utr !l !s =
-  let !posScore = getPosScore (getSeedMatchSite s) l
-      !paScore = getPairScore (_seedType s) (_align s)
-      !utrSD = B8.filter isAlpha $! unGS $ alignment utr
-      !auScore = getAUScore utrSD s
+getRawScore utr l s =
+  let posScore = getPosScore (getSeedMatchSite s) l
+      paScore = getPairScore (_seedType s) (_align s)
+      utrSD = B8.filter isAlpha $ unGS $ alignment utr
+      auScore = getAUScore utrSD s
   in RS paScore auScore posScore
 {-# INLINE getRawScore #-}
 
 getPosScore :: Pair -> Int -> PosScore
 {-# INLINE getPosScore #-}
-getPosScore (P !a !b) !utrL = PosScore $! min maxDistToNearestEndOfUTREnd $!
-                              min (fromIntegral a) (fromIntegral $! utrL-1-b)
+getPosScore (P a b) utrL = PosScore $ min maxDistToNearestEndOfUTREnd $
+                           min (fromIntegral a) (fromIntegral $ utrL-1-b)
   where
     maxDistToNearestEndOfUTREnd = 1500
     
 getPairScore :: SeedType -> Align -> PairScore
 {-# INLINE getPairScore #-}
-getPairScore !s (Align !miR3' !mR5' !b) =
-  PairScore $!
+getPairScore s (Align miR3' mR5' b) =
+  PairScore $
   scanScore len 0
   (0,(getIdx len miRNA,
       getIdx len utr))
   where
-    getIdx !l !poly = (length $!
+    getIdx l poly = (length $
                        B8.findIndices isAlpha $
                        B8.take l poly) - 1
     idxV = UV.fromList $
            B8.findIndices isAlpha $
            B8.reverse miR3'
-    !n = B8.length b
+    n = B8.length b
     at = UV.unsafeIndex
-    !idx7 = idxV `at` 6
-    !idx8 = idxV `at` 7
-    !len = case s of
+    idx7 = idxV `at` 6
+    idx8 = idxV `at` 7
+    len = case s of
         M6 -> idx7
         M7A1 -> idx7
         _    -> idx8
-    !miRNA = B8.reverse miR3'
-    !utr   = B8.reverse mR5'
-    !idxFor13 = idxV `at` 12
-    !idxFor16 = idxV `at` 15
-    !bond = B8.reverse b
+    miRNA = B8.reverse miR3'
+    utr   = B8.reverse mR5'
+    idxFor13 = idxV `at` 12
+    idxFor16 = idxV `at` 15
+    bond = B8.reverse b
     -- baseScore c = if c == '|'  
     --               then 0.5
     --               else if c == ':'
     --                    then 0.25
     --                    else 0
-    baseScore !c = if c == '|' -- use same scoring schme as targetscan 6.2
-                   then 0.5
-                   else 0
+    baseScore c = if c == '|' -- use same scoring schme as targetscan 6.2
+                  then 0.5
+                  else 0
     {-# INLINE baseScore #-}
     {-# INLINE scanScore #-}
-    scanScore !idx !score preScore@(!maxScore,(!miIdx,!utrIdx))
+    scanScore idx score preScore@(maxScore,(miIdx,utrIdx))
       | idx < n   =
         if B8.index bond idx /= ' ' -- here, targetscan 6.2 seems not stop at GU
         then if idxFor13 <= idx && idx <= idxFor16
-             then let !score' = score + 2*baseScore (B8.index bond idx)
+             then let score' = score + 2*baseScore (B8.index bond idx)
                   in scanScore (idx+1) score' preScore
              else let score' = score + baseScore (B8.index bond idx)
                   in scanScore (idx+1) score' preScore
         else if score >= maxScore
-             then let !miIdx' = getIdx (idx-1) miRNA
-                      !utrIdx' = getIdx (idx-1) utr
+             then let miIdx' = getIdx (idx-1) miRNA
+                      utrIdx' = getIdx (idx-1) utr
                   in scanScore (idx+1) 0 (score,(miIdx',utrIdx'))
              else scanScore (idx+1) 0 preScore
-      | otherwise = let !offset = abs $! miIdx - utrIdx
+      | otherwise = let offset = abs $ miIdx - utrIdx
                     in maxScore - max 0 (0.5 * fromIntegral (offset - 2))
 
 getAUScoreImpl :: SeedType -> Pair -> ByteString -> AUScore
 {-# INLINE getAUScoreImpl #-}
-getAUScoreImpl !st (P !up' !dn') !utr =
-  let !up = case st of
+getAUScoreImpl st (P up' dn') utr =
+  let up = case st of
           M8 -> up' 
           M7M8 -> up' 
           M6O -> up'
           _ -> up' - 1
-      !dn = case st of
+      dn = case st of
           M8 -> dn'
           M7A1 -> dn'
           _ -> dn' - 1
 
-      (!us,!ds) = let ls = map (1/) [2.0..]
+      (us,ds) = let ls = map (1/) [2.0..]
                       ls1 = 1:ls
                       ls2 = 0.5:ls
                 in case st of
@@ -256,22 +256,22 @@ getAUScoreImpl !st (P !up' !dn') !utr =
                   M7M8 -> (ls1,ls2)
                   M7A1 -> (ls,ls)
                   _   -> (ls,ls2)
-      !up30 = B8.unpack $ B8.take 30 $
-              B8.map ((\c ->
+      up30 = B8.unpack $ B8.take 30 $
+             B8.map ((\c ->
                         if c == 'T'
                         then 'U'
                         else c) . toUpper) $
              B8.reverse $ B8.take up utr
-      !dn30 = B8.unpack $ B8.take 30 $
+      dn30 = B8.unpack $ B8.take 30 $
               B8.map ((\c ->
                         if c == 'T'
                         then 'U'
                         else c) . toUpper) $
               B8.drop dn utr
-      !total = foldl1' (+) $
+      total = foldl1' (+) $
                zipWith (\_ b -> b) up30 us ++
                zipWith (\_ b -> b) dn30 ds
-      !local = foldl1' (+) $
+      local = foldl1' (+) $
                zipWith (\c s ->
                          if c == 'A' || c == 'U'
                          then s
@@ -280,39 +280,39 @@ getAUScoreImpl !st (P !up' !dn') !utr =
                         if c == 'A' || c == 'U'
                         then s
                         else 0) dn30 ds
-  in AUScore $! local / total
+  in AUScore $ local / total
 
 getAUScore :: ByteString -> MSite -> AUScore
-getAUScore !utr !site =
-    let !p = getSeedMatchSite site
-        !st = _seedType site
+getAUScore utr site =
+    let p = getSeedMatchSite site
+        st = _seedType site
     in getAUScoreImpl st p utr
 {-# INLINE getAUScore #-}
 
 getSiteContrib :: SeedType -> Maybe Double
-getSiteContrib !st = siteContribMap ! fromEnum st
+getSiteContrib st = siteContribMap ! fromEnum st
 {-# INLINE getSiteContrib #-}
 
 getContextScore :: SeedType -> RawScore -> Maybe ContextScore
-getContextScore !st (RS (PairScore !pairS) (AUScore !auS) (PosScore !posS)) =
-  let !siteContrib = getSiteContrib st
-      !paCoef = paCoefMap ! fromEnum st
-      !auCoef = auCoefMap ! fromEnum st
-      !psCoef = psCoefMap ! fromEnum st
-      !paContrib = toScore <$> pure pairS <*> siteContrib <*> paCoef
-      !auContrib = toScore <$> pure auS <*> siteContrib <*> auCoef
-      !psContrib = toScore <$> pure posS <*> siteContrib <*> psCoef
-      !context = foldl1' (\a b -> (+) <$> a <*> b) [siteContrib,paContrib,auContrib,psContrib]
+getContextScore st (RS (PairScore pairS) (AUScore auS) (PosScore posS)) =
+  let siteContrib = getSiteContrib st
+      paCoef = paCoefMap ! fromEnum st
+      auCoef = auCoefMap ! fromEnum st
+      psCoef = psCoefMap ! fromEnum st
+      paContrib = toScore <$> pure pairS <*> siteContrib <*> paCoef
+      auContrib = toScore <$> pure auS <*> siteContrib <*> auCoef
+      psContrib = toScore <$> pure posS <*> siteContrib <*> psCoef
+      context = foldl1' (\a b -> (+) <$> a <*> b) [siteContrib,paContrib,auContrib,psContrib]
   in CS <$> context <*> paContrib <*> auContrib <*> psContrib <*> siteContrib
   where
     toScore :: Double -> Double -> Coef -> Double
-    toScore !score !mean (Coef !sl !inter) = score * sl + inter - mean
+    toScore score mean (Coef sl inter) = score * sl + inter - mean
 {-# INLINE getContextScore #-}
 
 getSPSTA :: SeedType -> ByteString -> (Maybe SPScore, Maybe TAScore)
-getSPSTA !st !seedWithN8 =
-  let !idx = pack seedWithN8
-      (!a,!b,!c) = toFSPPara idx
+getSPSTA st seedWithN8 =
+  let idx = pack seedWithN8
+      (a,b,c) = toFSPPara idx
   in case st of
     M8 -> (Just (SPScore a), Just (TAScore c))
     M7M8 -> (Just (SPScore a), Just (TAScore c))
@@ -322,17 +322,17 @@ getSPSTA !st !seedWithN8 =
     _   -> (Nothing, Just (TAScore c))
   where
     cToI :: Char -> Int
-    cToI !c =
+    cToI c =
       case toUpper c of
         'A' -> 0
         'C' -> 1
         'G' -> 2
         'T' -> 3
         'U' -> 3
-        _   -> error "Invalid char in cToI"
+        _   -> error "Invalid char in getSPSTA:cToI"
     pack :: ByteString -> Int
-    pack !bs =
-      let !str = B8.unpack $ B8.reverse bs
+    pack bs =
+      let str = B8.unpack $ B8.reverse bs
       in sum $ map (\(i,c) -> cToI c * 4^i) $ zip [0..] str
 {-# INLINE getSPSTA #-}         
 
@@ -388,7 +388,7 @@ mergeScore (r,cs) =
             foldl'
             (\(con@(!a1,!b1,!c1,!d1,!e1,!f1),nonCon@(!a2,!b2,!c2,!d2,!e2,!f2)) (s,c) ->
               if isConserved c
-              then let !con' = case seedType s of
+              then let con' = case seedType s of
                            M8 -> (a1+1,b1,c1,d1,e1,f1)
                            M7M8 -> (a1,b1+1,c1,d1,e1,f1)
                            M7A1 -> (a1,b1,c1+1,d1,e1,f1)
@@ -396,7 +396,7 @@ mergeScore (r,cs) =
                            M6O -> (a1,b1,c1,d1,e1+1,f1)
                            Imperfect -> (a1,b1,c1,d1,e1,f1+1)
                    in (con',nonCon)
-              else let !nonCon' = case seedType s of
+              else let nonCon' = case seedType s of
                            M8 -> (a2+1,b2,c2,d2,e2,f2)
                            M7M8 -> (a2,b2+1,c2,d2,e2,f2)
                            M7A1 -> (a2,b2,c2+1,d2,e2,f2)

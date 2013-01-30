@@ -43,8 +43,8 @@ calcBranchLength = flip go
                 then d
                 else 0
             NTInterior (_,d) ts ->
-                let (!leafs,!subts) = partition isLeaf ts
-                    (!ld,!as') = foldl' (\ac@(acc,!rs) (NTLeaf (_,d') !l) ->
+                let (leafs,subts) = partition isLeaf ts
+                    (ld,as') = foldl' (\ac@(acc,rs) (NTLeaf (_,d') l) ->
                                         if l `elem` rs
                                         then let !acc' = acc + d'
                                              in (acc',delete l rs)

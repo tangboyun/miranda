@@ -53,7 +53,9 @@ main = do
 
 -- miRNAPredict spec (head fas) utrF >>= writeFile "/tmp/test.xml" . showSpreadsheet . mkSiteWorkbook "hsa-let-7i"
 -- miRNAPredict spec (head fas) utrF >>= writeFile "/tmp/test.xml" . showSpreadsheet . mkTargetWorkbook "Diagrams"
- miRNAPredict spec (head fas) utrF >>= toOutPut "/tmp/testMiR" 
+-- miRNAPredict spec (head fas) utrF >>= toOutPut "/tmp/testMiR"
+ mkdir "/tmp/testMiR" >> miRNAPredict spec (head fas) utrF >>= toDiagrams "/tmp/testMiR" 
+ 
 -- rs <- miRNAPredict spec (head fas) utrF
 
 -- rend "testTable.pdf" (recordDiagram $ head rs)

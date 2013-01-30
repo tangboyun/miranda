@@ -62,24 +62,39 @@ toOutPut outPath rs =
               writeFile siteFile $ showSpreadsheet $
               mkSiteWorkbook ("." </> dDir) rs
         a3 <- async $
-              forM_ rs $ \r ->
-              let mid = miRNA r
-                  sy = geneSymbol $ utr r
-                  re = refSeqID $ utr r
-                  base = B8.unpack
-                         (mid <> " vs " <>
-                          re <> "(" <> sy <> ")") <.> "pdf"
-                  outF = outP </> base
-              in rend outF $ recordDiagram r
+              toDiagrams outP rs
+              -- forM_ rs $ \r ->
+              -- let mid = miRNA r
+              --     sy = geneSymbol $ utr r
+              --     re = refSeqID $ utr r
+              --     base = B8.unpack
+              --            (mid <> " vs " <>
+              --             re <> "(" <> sy <> ")") <.> "pdf"
+              --     outF = outP </> base
+              -- in rend outF $ recordDiagram r
                  
         _ <- wait a1
         _ <- wait a2
         _ <- wait a3
         return ()
-  where
-    mkdir fp = doesDirectoryExist fp >>=
-               flip unless (createDirectory fp) 
+
+mkdir :: FilePath -> IO ()
+mkdir fp = doesDirectoryExist fp >>=
+           flip unless (createDirectory fp) 
     
+toDiagrams :: FilePath -> [Record] -> IO ()
+toDiagrams outP rs =
+    forM_ rs $ \r ->
+    let mid = miRNA r
+        sy = geneSymbol $ utr r
+        re = refSeqID $ utr r
+        base = B8.unpack
+               (mid <> " vs " <>
+                re <> "(" <> sy <> ")") <.> "pdf"
+        outF = outP </> base
+    in rend outF $ recordDiagram r
+    
+
 -- TargetScan网站上的坐标是1based, NOT 0 based
 -- | for debug use, most sites should be the same as targetscan 's out put
 toTargetScanOutFormat :: [SiteLine] -> [B8.ByteString]

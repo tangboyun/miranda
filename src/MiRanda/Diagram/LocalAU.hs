@@ -58,11 +58,13 @@ sep = monoW * 0.2
 plotLocalAU utr st (P up' dn') =
   let up = case st of
           M8 -> up' 
-          M7M8 -> up' 
+          M7M8 -> up'
+          M7A1 -> up' - 1
           M6O -> up'
           _ -> up' - 1
       dn = case st of
           M8 -> dn'
+          M7M8 -> dn' - 1
           M7A1 -> dn'
           _ -> dn' - 1
       str = B8.unpack $ B8.take (dn - up) $ B8.drop up utr
