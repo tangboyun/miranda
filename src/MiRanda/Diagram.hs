@@ -107,12 +107,16 @@ tableDiagram re =
         col5 = map
                (\s ->
                  pad 1.05 $
-                 case contextScorePlus s of
-                     Just csp ->
-                         if contextPlus csp < 0
-                         then mAndT
-                         else onlyM
-                     Nothing -> onlyM
+                 case seedType s of
+                     M6 -> onlyM
+                     M6O -> onlyM
+                     Imperfect -> onlyM
+                     _ -> case contextScorePlus s of
+                         Just csp ->
+                             if contextPlus csp < 0
+                             then mAndT
+                             else onlyM
+                         Nothing -> onlyM
                ) ss
         (header:ds) = transpose $ map
                       (\col ->
