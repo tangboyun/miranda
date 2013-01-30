@@ -135,7 +135,10 @@ diff (P up dn) str1' str2' =
                  'T' -> 5
                  'U' -> 5
                  '-' -> 7
-                 _   -> error "Invalid char"
+                 'N' -> 7 -- for 'N'
+                 _   -> error $ "diff: Invalid char " ++ [c] ++ "\n" ++
+                        "str1': " ++ show str1 ++ "\n" ++
+                        "str2': " ++ show str2
       dif n = case n of
                1 -> 0 
                4 -> 0
@@ -149,7 +152,8 @@ diff (P up dn) str1' str2' =
                5 -> 2
                _ -> 3
   in foldl1 (+) $ map dif $
-     zipWith ((*) `on` cToI) (B8.unpack str1) (B8.unpack str2)
+     zipWith ((*) `on` (cToI . toUpper))
+     (B8.unpack str1) (B8.unpack str2)
            
 plotMultiAlign utr utrs seedRange siteRange =
   let ns = (map (commonName .
@@ -190,7 +194,7 @@ plotMultiAlign utr utrs seedRange siteRange =
       seedRE = seedEnd - exBeg
       siteRB = siteBeg - exBeg
       siteRE = siteEnd - exBeg
-      toFivePart = splitPlaces
+      toFivePart = splitPlacesBlanks -- use splitPlacesBlanks for siteLen >= 60
                    [siteRB
                    ,seedRB - siteRB
                    ,seedRE - seedRB
@@ -247,11 +251,12 @@ plotMultiAlign utr utrs seedRange siteRange =
                            # lc siteColor # centerX ===
                            (hcat b # alignB ||| dC # alignB |||
                             hcat d # alignB) # centerX
-                  in hcat a # alignB ||| dM # alignB |||
+                  in centerX $
+                     hcat a # alignB ||| dM # alignB |||
                      hcat e # alignB
                   ) $
                 toFivePart $ head dMatrix
-      tailLs = (map hcat $ tail dMatrix)
+      tailLs = map (centerX . hcat) $ tail dMatrix
       charStas = hcat' (CatOpts Distrib monoW Proxy) $
                  plotSeqStas True beforeSite ++
                  plotSeqStas False siteStr ++
@@ -261,7 +266,7 @@ plotMultiAlign utr utrs seedRange siteRange =
               printf "%d ~ %d : %d" a b c :: String
             ) . calcRange (exBeg,exEnd)) ss
       rLen = maximum $ map length rs            
-      dM = vcat $ fstLine : (tailLs ++ [strutY 0.8 === charStas])
+      dM = vcat $ fstLine : (tailLs ++ [centerX $ strutY 0.8 === charStas])
       coef = 0.5
       lhs = vcat (map
                   (\nm ->
@@ -302,6 +307,7 @@ plotMultiAlign utr utrs seedRange siteRange =
               'T' -> fcA (tColor `withOpacity` p) 
               'U' -> fcA (uColor `withOpacity` p) 
               '-' -> id
+              'N' -> id
               _ -> error "Invalid char in chooseColor"
 
         get (ch',(a,c,g,t,u)) =
