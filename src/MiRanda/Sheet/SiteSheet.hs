@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings,BangPatterns #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : 
@@ -13,7 +13,8 @@
 -----------------------------------------------------------------------------
 module MiRanda.Sheet.SiteSheet
        (
-           mkSiteWorkbook
+         mkSiteWorkbook
+       , toSiteLines
        )
        where
 
@@ -34,22 +35,22 @@ import Data.Maybe
 import System.FilePath
 import Data.Monoid
 
-toSiteLines :: [Record] -> [SiteLine]
+toSiteLines :: [(Record,[Conservation])] -> [SiteLine]
 {-# INLINE toSiteLines #-}
-toSiteLines rs = concatMap snd $ getSites $ recordFilter $ zip rs (getConservations rs)
+toSiteLines rs = getSites rs
 
 
-mkSiteWorkbook :: String -> [Record] -> Workbook
+mkSiteWorkbook :: String -> [SiteLine] -> Workbook
+{-# INLINE mkSiteWorkbook #-}
 mkSiteWorkbook dDir rs | (not $ null rs) =
-    let str = B8.unpack miID
-        miID = miRNA $ head rs
+    let miID = miRID $ head rs
+        str = B8.unpack miID        
     in addS $
        mkWorkbook $
        [mkWorksheet (Name str) $ 
         mkTable $
         headLine str : classLine : mkRow nameCells # withStyleID "bold" :
---        (map toRow $ sort $ toRefLines rs)
-        (map (toRow dDir) $ toSiteLines rs)        
+        (map (toRow dDir) rs)        
        ]
                        | otherwise = emptyWorkbook
   where
@@ -128,7 +129,8 @@ nameCells = map string
 
 
 toRow :: String -> SiteLine -> Row
-toRow dDir sl =
+{-# INLINE toRow #-}
+toRow !dDir !sl =
   let (Gene s r) = geneID sl
       mid = miRID sl
       base = B8.unpack
@@ -172,6 +174,7 @@ toRow dDir sl =
      
   
 myDouble :: Double -> Cell
+{-# INLINE myDouble #-}
 myDouble d = if (snd $ properFraction d) == 0
              then number d
              else number $ read $ printf "%.3f" d

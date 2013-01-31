@@ -1,4 +1,4 @@
-{-# LANGUAGE NoMonomorphismRestriction, OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings,BangPatterns,FlexibleContexts #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : 
@@ -35,6 +35,7 @@ import           MiRanda.Parameter
 import           MiRanda.Util
 import           MiRanda.Types
 import           Text.Printf
+import Diagrams.TwoD.Text
 
 aColor = red
 gColor = green
@@ -44,7 +45,9 @@ uColor = blue
 seedColor = dodgerblue
 siteColor = darkorange
 
+w',w,h,monoW,monoH :: Double
 w' = 1.75 * h
+
 h = 0.64
 w = 0.6 * h
 monoW = 0.70
@@ -54,42 +57,57 @@ monoFont = "Arial"
 
 conStr = "Conservation"
 
-
-serifStr c str =
-  let n = fromIntegral $ length str
+serifStr :: (Renderable Text b,Renderable (Path R2) b) => Colour Double -> String -> Diagram b R2
+{-# INLINE serifStr #-}
+serifStr !c !str =
+  let !n = fromIntegral $ length str
       localSize = 0.8
   in text str # font serifFont
               # fontSize localSize
               # fc c <>
      rect (n * 0.5) monoH # lcA transparent
 
-cChar c = (alignedText 0.44 0.44 "C" # fc c # font monoFont <>
-           rect w' h # lcA transparent) # centerXY
-
-tChar c = (alignedText 0.45 0.44 "T" # fc c # font monoFont <>
+cChar,tChar,uChar,gChar,aChar :: (Renderable Text b,Renderable (Path R2) b) => Colour Double -> Diagram b R2
+{-# INLINE cChar #-}
+cChar !c = (alignedText 0.44 0.44 "C" # fc c # font monoFont <>
            rect w' h # lcA transparent) # centerXY
           
-uChar c = (alignedText 0.45 0.44 "U" # fc c # font monoFont <>
+{-# INLINE tChar #-}
+tChar !c = (alignedText 0.45 0.44 "T" # fc c # font monoFont <>
            rect w' h # lcA transparent) # centerXY
-
-gChar c = (alignedText 0.45 0.44 "G" # fc c # font monoFont <>
+{-# INLINE uChar #-}          
+uChar !c = (alignedText 0.45 0.44 "U" # fc c # font monoFont <>
            rect w' h # lcA transparent) # centerXY
-
-aChar c = (alignedText 0.49 0.44 "A" # fc c # font monoFont <>
+          
+{-# INLINE gChar #-}
+gChar !c = (alignedText 0.45 0.44 "G" # fc c # font monoFont <>
            rect w' h # lcA transparent) # centerXY
-
-char ch = text [ch] <>
+          
+{-# INLINE aChar #-}
+aChar !c = (alignedText 0.49 0.44 "A" # fc c # font monoFont <>
+            rect w' h # lcA transparent) # centerXY
+char :: (Renderable Text b,Renderable (Path R2) b) => Char -> Diagram b R2           
+{-# INLINE char #-}
+char !ch = text [ch] <>
           rect w h # lcA transparent
 
-charC c ch = text [ch] # fc c <>
+
+charC :: (Renderable Text b,Renderable (Path R2) b) => Colour Double -> Char -> Diagram b R2           
+{-# INLINE charC #-}
+charC !c !ch = text [ch] # fc c <>
              rect w h # lcA transparent
              
-string = hcat . map char
+string :: (Renderable Text b,Renderable (Path R2) b) => String -> Diagram b R2            
+{-# INLINE string #-}             
+string str = hcat $ map char str
 
-stringC c = hcat . map (charC c)
+stringC :: (Renderable Text b,Renderable (Path R2) b) => Colour Double -> String -> Diagram b R2            
+{-# INLINE stringC #-}
+stringC c str = hcat $ map (charC c) str
 
-
-plotSeqStas isBW = map (plot . sortBy (flip compare `on` per) . tpToList)
+plotSeqStas :: (Renderable Text b,Renderable (Path R2) b) => Bool -> [(Double,Double,Double,Double,Double)] -> [Diagram b R2]
+{-# INLINE plotSeqStas #-}
+plotSeqStas isBW ts = map (plot . sortBy (flip compare `on` per) . tpToList) ts
   where
     tpToList (a,c,g,t,u) = [A a, C c, G g, T t, U u]
     toBW = if isBW
@@ -123,12 +141,12 @@ plotSeqStas isBW = map (plot . sortBy (flip compare `on` per) . tpToList)
                      then mempty
                      else gChar (toBW gColor) # scaleY (p/0.25))
 
-
+{-# INLINE diff #-}
 diff :: Pair -> ByteString -> ByteString -> Double
-diff (P up dn) str1' str2' =
-  let str1 = B8.take (dn - up + 1) $ B8.drop up str1'
-      str2 = B8.take (dn - up + 1) $ B8.drop up str2'
-      cToI c = case c of
+diff (P up dn) !str1' !str2' =
+  let !str1 = B8.take (dn - up + 1) $ B8.drop up str1'
+      !str2 = B8.take (dn - up + 1) $ B8.drop up str2'
+      cToI !c = case c of
                  'A' -> 1 :: Int
                  'C' -> 2
                  'G' -> 3
@@ -139,7 +157,7 @@ diff (P up dn) str1' str2' =
                  _   -> error $ "diff: Invalid char " ++ [c] ++ "\n" ++
                         "str1': " ++ show str1 ++ "\n" ++
                         "str2': " ++ show str2
-      dif n = case n of
+      dif !n = case n of
                1 -> 0 
                4 -> 0
                9 -> 0
@@ -154,8 +172,9 @@ diff (P up dn) str1' str2' =
   in foldl1 (+) $ map dif $
      zipWith ((*) `on` (cToI . toUpper))
      (B8.unpack str1) (B8.unpack str2)
-           
-plotMultiAlign utr utrs seedRange siteRange =
+     
+plotMultiAlign :: (Renderable Text b,Renderable (Path R2) b,Backend b R2) => UTR -> [UTR] -> Pair -> Pair -> Diagram b R2
+plotMultiAlign !utr !utrs !seedRange !siteRange =
   let ns = (map (commonName .
                  (taxMap `at`) .
                  taxonomyID) ss) ++ [conStr]
@@ -166,8 +185,8 @@ plotMultiAlign utr utrs seedRange siteRange =
       utrs' = sortBy
               (compare `on`
                -- 这里可能用个聚类更好些
-               ((diff (P exBeg exEnd) (extractSeq utr)) . extractSeq)) $ -- 以整个plot片段最近邻排序              
---               ((diff (P siteBeg siteEnd) (extractSeq utr)) . extractSeq)) $ -- 以site位点最近邻排序
+--               ((diff (P exBeg exEnd) (extractSeq utr)) . extractSeq)) $ -- 以整个plot片段最近邻排序              
+               ((diff (P siteBeg siteEnd) (extractSeq utr)) . extractSeq)) $ -- 以site位点最近邻排序
               utrs
       seqStr = extractSeq utr
       ss = utr:utrs'
@@ -178,20 +197,20 @@ plotMultiAlign utr utrs seedRange siteRange =
                 else 1) $
           B8.unpack $ seqStr
       strLen = UV.maximum s
-      seedBeg = fromJust $ UV.findIndex (== (1+beg seedRange)) s
-      seedEnd = 1+fromJust $ UV.findIndex (== (end seedRange)) s
-      siteBeg = fromJust $ UV.findIndex (== (1+beg siteRange)) s
-      siteEnd = 1+fromJust $ UV.findIndex (== (end siteRange)) s
+      seedBeg = fromJust $! UV.findIndex (== (1+beg seedRange)) s
+      seedEnd = 1+fromJust $! UV.findIndex (== (end seedRange)) s
+      siteBeg = fromJust $! UV.findIndex (== (1+beg siteRange)) s
+      siteEnd = 1+fromJust $! UV.findIndex (== (end siteRange)) s
       siteLen = siteEnd - siteBeg
-      (exBeg,exEnd) = if siteLen < 60
-                      then let b = ceiling $ (60 - fromIntegral siteLen) / 2
-                               e = floor $ (60 - fromIntegral siteLen) / 2
-                           in if siteBeg - b < 0
-                              then (0,60)
-                              else if siteEnd + e > UV.length s
-                                then (strLen - 60, strLen)
-                                else (siteBeg - b, siteEnd + e)
-                      else (siteBeg, siteEnd)
+      (!exBeg,!exEnd) = if siteLen < 60
+                        then let !b = ceiling $ (60 - fromIntegral siteLen) / 2
+                                 !e = floor $ (60 - fromIntegral siteLen) / 2
+                             in if siteBeg - b < 0
+                                then (0,60)
+                                else if siteEnd + e > UV.length s
+                                     then (strLen - 60, strLen)
+                                     else (siteBeg - b, siteEnd + e)
+                        else (siteBeg, siteEnd)
       seedRB = seedBeg - exBeg
       seedRE = seedEnd - exBeg
       siteRB = siteBeg - exBeg
@@ -217,24 +236,24 @@ plotMultiAlign utr utrs seedRange siteRange =
                                        ,siteRE - siteRB
                                        ,(B8.length $ head strs)-siteRE]
                                        seqStas
-      maxH = 4 * h * maximum $
-             map (\(a,c,g,t,u) -> maximum [a,c,g,t,u]) seqStas
+      maxH = 4 * h * (maximum $
+                      map (\(a,c,g,t,u) -> maximum [a,c,g,t,u]) seqStas)
       seqStas = map
-                 (\i ->
-                   let vec = UV.fromList $
-                             map (\s ->
+                (\i ->
+                  let vec = UV.fromList $
+                            map (\s ->
                                    B8.index s i
                                  ) strs
-                       count f = fromIntegral $
-                                 UV.length $
-                                 UV.findIndices f vec
-                       n = fromIntegral $ UV.length vec
-                       a = count ((== 'A') . toUpper) / n
-                       c = count ((== 'C') . toUpper) / n
-                       g = count ((== 'G') . toUpper) / n
-                       t = count ((== 'T') . toUpper) / n
-                       u = count ((== 'U') . toUpper) / n
-                   in (a,c,g,t,u)
+                      count f = fromIntegral $!
+                                UV.length $
+                                UV.findIndices f vec
+                      n = fromIntegral $ UV.length vec
+                      !a = count ((== 'A') . toUpper) / n
+                      !c = count ((== 'C') . toUpper) / n
+                      !g = count ((== 'G') . toUpper) / n
+                      !t = count ((== 'T') . toUpper) / n
+                      !u = count ((== 'U') . toUpper) / n
+                  in (a,c,g,t,u)
                  ) [0..(B8.length $ head strs)-1]
       at = (IM.!)
       dMatrix = map (plotOneChain siteStas) chss
@@ -288,21 +307,22 @@ plotMultiAlign utr utrs seedRange siteRange =
                   ) rs) === strutY (0.8 + maxH)
   in (lhs # alignB ||| dM # alignB ||| rhs # alignB) # centerXY
    
-  where 
-    plotOneChain (bp1:bp2:bp3:[]) (bwBeg:b1:b2:b3:bwEnd:[]) =
+  where
+    {-# INLINE plotOneChain #-}
+    plotOneChain !(bp1:bp2:bp3:[]) !(bwBeg:b1:b2:b3:bwEnd:[]) =
       let f a b = map (charCP . get) $ zip a b
           d1 = f b1 bp1
           d2 = f b2 bp2
           d3 = f b3 bp3
       in map charA bwBeg ++ d1 ++ d2 ++ d3 ++ map charA bwEnd
       where
-        charA ch = text [ch] # font monoFont <>
-                   rect monoW monoH # lcA transparent
-        charCP (ch,p) = text [ch] # font monoFont <>
-                rect monoW monoH # lcA transparent
-                # chooseColor
-          where 
-            chooseColor = case ch of
+        charA !ch = text [ch] # font monoFont <>
+                    rect monoW monoH # lcA transparent
+        charCP (!ch,!p) = text [ch] # font monoFont <>
+                          rect monoW monoH # lcA transparent
+                          # chooseColor
+          where
+            !chooseColor = case ch of
               'A' -> fcA (aColor `withOpacity` p) 
               'C' -> fcA (cColor `withOpacity` p) 
               'G' -> fcA (gColor `withOpacity` p) 
@@ -311,9 +331,8 @@ plotMultiAlign utr utrs seedRange siteRange =
               '-' -> id
               'N' -> id
               _ -> error "Invalid char in chooseColor"
-
-        get (ch',(a,c,g,t,u)) =
-          let ch = toUpper ch'
+        get (!ch',(!a,!c,!g,!t,!u)) =
+          let !ch = toUpper ch'
           in case ch of
             'A' -> (ch,a)
             'C' -> (ch,c)
@@ -322,21 +341,23 @@ plotMultiAlign utr utrs seedRange siteRange =
             'U' -> (ch,u)
             _ -> (ch,0)
     plotOneChain a b = error $ show a ++ "\n\n\n" ++ show b
-            
 
-calcRange (i,j) = (\s ->
+calcRange :: (Int,Int) -> UTR -> (Int,Int,Int)
+{-# INLINE calcRange #-}
+calcRange (!i,!j) u = (\s ->
                       let (str1,str2) = B8.splitAt i s
                           (str3,str4) = B8.splitAt (j-i) str2
-                          a = length $
-                              B8.findIndices isAlpha str1
-                          b = length $
-                              B8.findIndices isAlpha str3
-                          c = length $
+                          !a = length $!
+                               B8.findIndices isAlpha str1
+                          !b = length $!
+                               B8.findIndices isAlpha str3
+                          !c = length $!
                               B8.findIndices isAlpha str4
                       in (a,a+b,a+b+c)
-                    ) . extractSeq
-
-toRange (i,j) str =
+                    ) $ extractSeq u
+                  
+{-# INLINE toRange #-}                  
+toRange (!i,!j) !str =
   let i' = B8.length $ B8.filter isAlpha $ B8.take i str
       n = B8.length $ B8.filter isAlpha $
           B8.take (j-i) $ B8.drop i str

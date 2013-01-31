@@ -14,6 +14,9 @@
 
 module MiRanda.IO where
 
+import           Control.Arrow
+import           Control.Concurrent.Async
+import           Control.Monad
 import           Data.Attoparsec.ByteString.Char8
 import qualified Data.ByteString.Char8 as B8
 import           Data.ByteString.Lazy (ByteString)
@@ -27,72 +30,131 @@ import           Data.List
 import           Data.Maybe
 import           Data.Monoid
 import           Data.Time
+import           MiRanda.Diagram
 import           MiRanda.Parameter
 import           MiRanda.Parser
+import           MiRanda.Score
+import           MiRanda.Sheet.SiteSheet
+import           MiRanda.Sheet.TargetSheet
 import           MiRanda.Types
-import MiRanda.Util
+import           MiRanda.Util
 import           System.Directory
+import           System.Directory
+import           System.Exit
 import           System.FilePath
 import           System.IO
 import           System.Process
-import           MiRanda.Score
-import           Control.Arrow
 import           Text.Printf
-import System.Exit
-import Control.Concurrent.Async
-import Text.XML.SpreadsheetML.Writer (showSpreadsheet)
-import MiRanda.Diagram
-import MiRanda.Sheet.TargetSheet
-import MiRanda.Sheet.SiteSheet
-import Control.Monad
-import System.Directory
+import           Text.XML.SpreadsheetML.Writer (showSpreadsheet)
+import GHC.Conc
+import Control.Parallel.Strategies
+import Data.List.Split
 
-toOutPut :: FilePath -> [Record] -> IO ()
-toOutPut outPath rs =
+toOutPut :: String -> FilePath -> FilePath -> [MRecord] -> IO ()
+{-# INLINE toOutPut #-}
+toOutPut spe allUTRFile outPath mRs =
     let dDir = "Diagrams"
         outP = outPath </> dDir
         targetFile = outPath </> "Target Genes.xml"
         siteFile = outPath </> "Target Sites.xml"
+        hRef = dDir
     in do
+        (rfs,sis) <- readUTRs allUTRFile (map _mRNA mRs) >>=
+              return .
+              (toRefLines &&& toSiteLines) .
+              (\ss -> zip ss (getConservations ss)) . recordFilter . toRecord spe mRs
         mkdir outP
         a1 <- async $
               writeFile targetFile $ showSpreadsheet $
-              mkTargetWorkbook ("." </> dDir) rs
+              mkTargetWorkbook hRef $ withStrategy (evalList rseq) rfs
         a2 <- async $
               writeFile siteFile $ showSpreadsheet $
-              mkSiteWorkbook ("." </> dDir) rs
-        a3 <- async $
-              toDiagrams outP rs
-              -- forM_ rs $ \r ->
-              -- let mid = miRNA r
-              --     sy = geneSymbol $ utr r
-              --     re = refSeqID $ utr r
-              --     base = B8.unpack
-              --            (mid <> " vs " <>
-              --             re <> "(" <> sy <> ")") <.> "pdf"
-              --     outF = outP </> base
-              -- in rend outF $ recordDiagram r
-                 
-        _ <- wait a1
-        _ <- wait a2
-        _ <- wait a3
+              mkSiteWorkbook hRef sis
+        a3 <- async $ do
+            rs' <- readUTRs allUTRFile (map _mRNA mRs) >>= 
+                  return . recordFilter . toRecord spe mRs
+            toDiagrams outP rs'
+            
+              -- (rs1,rs2) <- readUTRs allUTRFile (map _mRNA mRs) >>= 
+              --              return .
+              --              ((map snd) *** (map snd)) .
+              --              partition (odd . fst) . zip [1..] .
+              --              recordFilter . toRecord spe mRs
+              -- a4 <- async $
+              --       toDiagrams outP rs1
+              -- a5 <- async $
+              --       toDiagrams outP rs2
+              -- wait a4
+              -- wait a5
+        wait a1
+        wait a2
+        wait a3
         return ()
 
+splitList :: Int -> [a] -> [[a]]
+splitList n ls =
+    let ls' = zip [1..] ls
+        ns = [0..n-1]
+    in map
+       (\i ->
+         map snd $ filter ((== i) . (`mod` n) . fst) ls'
+       ) ns
+
+recordFilter :: [Record] -> [Record]
+{-# INLINE recordFilter #-}
+recordFilter rs =
+    map fst $
+    filter ( not . null . snd) $
+    map
+    (\(r,cons) ->
+      let ss = predictedSites r
+          (ss',cons') = unzip $
+                          filter
+                          (\(s,con) ->
+                            let scoreBool = 
+                                    case contextScorePlus s of
+                                        Nothing -> -- 6mer,6mer offset and imperfect seed match
+                                            if branchLength con >= stringentBranchLengthCutOff
+                                            then True
+                                            else False
+                                        Just csp ->
+                                            if contextPlus csp < 0 
+                                            then True
+                                            else False
+                                (P b e) = seedMatchRange s
+                                posBool = b >= 30 &&
+                                          (l - e) >= 30
+                            in scoreBool && posBool
+                          ) $ zip ss cons
+          l = length $ B8.findIndices isAlpha $ extractSeq $ utr r
+          r' = r {predictedSites = ss'}
+      in (r',cons')
+    ) $ zip rs $ getConservations rs
+  where 
+    stringentBranchLengthCutOff :: Double
+    stringentBranchLengthCutOff = 0.5
+    branchLengthCutOff :: Double
+    branchLengthCutOff = 0.3
+
+
 mkdir :: FilePath -> IO ()
-mkdir fp = doesDirectoryExist fp >>=
-           flip unless (createDirectory fp) 
+mkdir = createDirectoryIfMissing True
     
 toDiagrams :: FilePath -> [Record] -> IO ()
 toDiagrams outP rs =
-    forM_ rs $ \r ->
-    let mid = miRNA r
-        sy = geneSymbol $ utr r
-        re = refSeqID $ utr r
-        base = B8.unpack
-               (mid <> " vs " <>
-                re <> "(" <> sy <> ")") <.> "pdf"
-        outF = outP </> base
-    in rend outF $ recordDiagram r
+    mapM_ (\(d,outF) -> rend outF d) $
+    withStrategy (parBuffer numCapabilities rseq) $
+    map
+    (\r ->
+      let mid = miRNA r
+          sy = geneSymbol $ utr r
+          re = refSeqID $ utr r
+          base = B8.unpack
+                 (mid <> " vs " <>
+                  re <> "(" <> sy <> ")") <.> "pdf"
+          !outF = outP </> base
+          !d = recordDiagram r
+      in (d,outF)) rs
     
 
 -- TargetScan网站上的坐标是1based, NOT 0 based
@@ -151,7 +213,7 @@ mkProcess miRFile utrFile = do
 
       
 
-miRNAPredict :: String -> Fasta -> FilePath -> IO [Record]
+miRNAPredict :: String -> Fasta -> FilePath -> IO [MRecord]
 miRNAPredict spe miFasta@(Fasta sid _) allUTRFile =
   do
     tmpDir <- getTemporaryDirectory
@@ -164,10 +226,38 @@ miRNAPredict spe miFasta@(Fasta sid _) allUTRFile =
     mRs <- return . mRecordFilter . toMRecords =<< B8.hGetContents outH
     ex <- waitForProcess pH
     case ex of
-        ExitSuccess -> do
-            utrSets <- readUTRs allUTRFile $! map _mRNA mRs
-            return $ toRecord spe mRs utrSets
+        ExitSuccess -> return mRs
         _ -> exitWith ex
+
+mRecordFilter :: [MRecord] -> [MRecord]
+{-# INLINE mRecordFilter #-}
+mRecordFilter mrs =
+    filter
+    (\mr ->
+      if null (sites mr)
+      then False
+      else True) $
+    map
+    (\mr ->
+      let ss = sites mr
+          ss' = filter
+                (\s ->
+                  case _seedType s of
+                      Imperfect ->
+                          let (PairScore p) = getPairScore Imperfect $!
+                                              _align s
+                          in if p >= 2
+                             then True
+                             else False
+                      other -> True
+                          -- let (PairScore p) = getPairScore other $!
+                          --                     _align s
+                          -- in if p >= 0
+                          --    then True
+                          --    else False
+                ) ss
+      in mr {sites=ss'}) mrs
+
 
 dumpGenome :: String -> FilePath -> FilePath -> IO ()
 dumpGenome specName inFile outFile =
@@ -179,7 +269,7 @@ dumpGenome specName inFile outFile =
   ) . toUTRs . L8.filter (/= '\r')
   
 orgToTaxID :: String -> Int
-orgToTaxID s =
+orgToTaxID !s =
   snd $! fromJust $ find (\(a,b) -> s == B8.unpack a) $
   map (\(i,l) -> (commonName l,i)) $! IM.toList taxMap
 {-# INLINE orgToTaxID #-}

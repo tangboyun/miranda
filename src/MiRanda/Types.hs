@@ -19,45 +19,43 @@ import Data.Vector.Unboxed
 import Data.Monoid
 
 data RefLine = RL
-  { rmiRID :: ByteString
-  , rgene :: Gene
-  , rmirandaScore :: MScore
-  , rconserveScore :: Conservation
-  , rrawScore :: RawScore
-  , rcontextScore :: (Maybe ContextScore)
-  , rcontextScorePlus :: (Maybe ContextScorePlus)
-  , totalSite :: Int
-  , conservedSite :: (Int,Int,Int,Int,Int,Int)
-  , nonConservedSite :: (Int,Int,Int,Int,Int,Int)
-  , utrLength :: Int
-  , utrSeq :: ByteString
+  { rmiRID :: !ByteString
+  , rgene :: !Gene
+  , rmirandaScore :: !MScore
+  , rconserveScore :: !Conservation
+  , rrawScore :: !RawScore
+  , rcontextScore :: !(Maybe ContextScore)
+  , rcontextScorePlus :: !(Maybe ContextScorePlus)
+  , totalSite :: !Int
+  , conservedSite :: !(Int,Int,Int,Int,Int,Int)
+  , nonConservedSite :: !(Int,Int,Int,Int,Int,Int)
+  , utrLength :: !Int
+  , utrSeq :: !ByteString
   } deriving (Show,Eq)
 
 data SiteLine = SL
-  { miRID :: ByteString
-  , geneID :: Gene
-  , mirandaScore :: MScore
-  , conserve_Score :: Conservation
-  , raw_Score :: RawScore
-  , context_Score :: (Maybe ContextScore)
-  , context_Score_Plus :: (Maybe ContextScorePlus)
-  , seedRange :: Pair
-  , siteRange :: Pair
-  , seed :: SeedType
-  , alignStructure :: Align
+  { miRID :: !ByteString
+  , geneID :: !Gene
+  , mirandaScore :: !MScore
+  , conserve_Score :: !Conservation
+  , raw_Score :: !RawScore
+  , context_Score :: !(Maybe ContextScore)
+  , context_Score_Plus :: !(Maybe ContextScorePlus)
+  , seedRange :: !Pair
+  , siteRange :: !Pair
+  , seed :: !SeedType
+  , alignStructure :: !Align
   } deriving (Show,Eq)
 
-newtype Inclusive = Inclusive (Int,Int)
-                    deriving (Show,Eq)
 data Gene = Gene 
-  {syb :: ByteString
-  ,ref :: ByteString
+  {syb :: !ByteString
+  ,ref :: !ByteString
   } deriving (Show,Eq)
       
 data Conservation = Con
-  { isConserved :: Bool
+  { isConserved :: !Bool
   , branchLength :: {-# UNPACK #-} !Double
-  , pct :: (Maybe Double)
+  , pct :: !(Maybe Double)
   } deriving (Show,Eq)
   
 
@@ -67,9 +65,9 @@ data Fasta = Fasta
   } deriving (Show,Eq)
 
 data UTR = UTR
-  {geneSymbol :: ByteString
-  ,refSeqID :: ByteString
-  ,taxonomyID :: Int
+  {geneSymbol :: !ByteString
+  ,refSeqID :: !ByteString
+  ,taxonomyID :: !Int
   ,alignment :: GapSeq
   } deriving (Show,Eq)
 
@@ -82,48 +80,48 @@ newtype SeqData = SD
    deriving (Show,Eq)
 
 data Record = Record
-  {miRNA :: ByteString
-  ,gene :: ByteString -- refSeqID
-  ,utr :: UTR -- ref utr
-  ,homoUTRs :: [UTR] -- utrs except for ref utr
-  ,predictedSites :: [Site]
+  {miRNA :: !ByteString
+  ,gene :: !ByteString -- refSeqID
+  ,utr :: !UTR -- ref utr
+  ,homoUTRs :: ![UTR] -- utrs except for ref utr
+  ,predictedSites :: ![Site]
   } deriving (Show,Eq)
 
 data Site = Site
-  { miRandaScore :: MScore
-  , rawScore :: RawScore
-  , contextScore :: (Maybe ContextScore)
-  , contextScorePlus :: (Maybe ContextScorePlus)
-  , seedMatchRange :: Pair
-  , utrRange :: Pair
-  , match :: Match
-  , seedType :: SeedType
-  , align :: Align
+  { miRandaScore :: !MScore
+  , rawScore :: !RawScore
+  , contextScore :: !(Maybe ContextScore)
+  , contextScorePlus :: !(Maybe ContextScorePlus)
+  , seedMatchRange :: !Pair
+  , utrRange :: !Pair
+  , match :: !Match
+  , seedType :: !SeedType
+  , align :: !Align
   } deriving (Show,Eq)
    
 data MRecord = MRecord
-  { _miRNA :: ByteString
-  , _mRNA :: ByteString -- refSeqID
-  , sites :: [MSite]
+  { _miRNA :: !ByteString
+  , _mRNA :: !ByteString -- refSeqID
+  , sites :: ![MSite]
   , strand :: {-# UNPACK #-} !Int
   , miRNALen :: {-# UNPACK #-} !Int
   , mRNALen :: {-# UNPACK #-} !Int    
   } deriving (Show)
 
 data MSite = MSite
-  { _mScore :: MScore 
-  , _miRNARange :: Pair
-  , _mRNARange :: Pair
+  { _mScore :: !MScore 
+  , _miRNARange :: !Pair
+  , _mRNARange :: !Pair
   , _alignLen :: {-# UNPACK #-} !Int
-  , _match :: Match
-  , _seedType :: SeedType
-  , _align :: Align
+  , _match :: !Match
+  , _seedType :: !SeedType
+  , _align :: !Align
   } deriving (Show,Eq)
 
 data Latin = Latin
-  { genus :: ByteString
-  , species :: ByteString
-  , commonName :: ByteString
+  { genus :: !ByteString
+  , species :: !ByteString
+  , commonName :: !ByteString
   } deriving (Eq)
 
 data Setting = Setting
@@ -151,9 +149,9 @@ data Match = Match
   } deriving (Show,Eq)
 
 data Align = Align
-  { miRNASite3' :: ByteString
-  , mRNASite5' :: ByteString
-  , hydrogenBond :: ByteString
+  { miRNASite3' :: !ByteString
+  , mRNASite5' :: !ByteString
+  , hydrogenBond :: !ByteString
   } deriving (Show,Eq)
 
 data Sta where
@@ -196,9 +194,9 @@ data Coef = Coef
   } deriving (Eq,Ord)
    
 data RawScore = RS
-  {pairingScore :: PairScore
-  ,auScore :: AUScore
-  ,posScore :: PosScore
+  {pairingScore :: !PairScore
+  ,auScore :: !AUScore
+  ,posScore :: !PosScore
   } deriving (Show,Eq,Ord)
 
 
@@ -303,7 +301,7 @@ instance Additive Conservation where
     {-# INLINE add #-}
 
 instance Ord RefLine where
-    compare rf1 rf2 =
+    compare !rf1 !rf2 =
         myCompare (rcontextScorePlus rf1) (rcontextScorePlus rf2) <>
         myCompare (rcontextScore rf1) (rcontextScore rf2) <>
         compare (rmirandaScore rf1) (rmirandaScore rf2) <>

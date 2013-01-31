@@ -13,7 +13,8 @@
 -----------------------------------------------------------------------------
 module MiRanda.Sheet.TargetSheet
        (
-           mkTargetWorkbook
+         mkTargetWorkbook
+       , toRefLines
        )
        where
 
@@ -32,23 +33,26 @@ import Text.Printf
 import MiRanda.Score
 import System.FilePath
 import Data.Monoid
+import Control.Parallel.Strategies
+import GHC.Conc
 
-toRefLines :: [Record] -> [RefLine]
-toRefLines rs = map mergeScore $ recordFilter $ zip rs (getConservations rs)
+toRefLines :: [(Record,[Conservation])] -> [RefLine]
+toRefLines rs = withStrategy (parBuffer numCapabilities rseq) $ map mergeScore rs
 {-# INLINE toRefLines #-}    
 
 
-mkTargetWorkbook :: String -> [Record] -> Workbook
+mkTargetWorkbook :: String -> [RefLine] -> Workbook
+{-# INLINE mkTargetWorkbook #-}
 mkTargetWorkbook dDir rs | (not $ null rs) =
     let str = B8.unpack miID
-        miID = miRNA $ head rs
+        miID = rmiRID $ head rs
     in addS $
        mkWorkbook $
        [mkWorksheet (Name str) $ 
         mkTable $
         headLine str : classLine : mkRow nameCells # withStyleID "bold" :
---        (map (toRow dDir) $ sort $ toRefLines rs)
-        (map (toRow dDir) $ toRefLines rs)        
+        (map (toRow dDir) $ sort rs)
+--        (map (toRow dDir) $ toRefLines rs)        
        ]
                          | otherwise = emptyWorkbook
   where
@@ -124,7 +128,8 @@ nameCells = [string "RefSeqID"
 
 
 toRow :: String -> RefLine -> Row
-toRow dDir rl =
+{-# INLINE toRow #-}
+toRow !dDir !rl =
   let (Gene s r) = rgene rl
       mid = rmiRID rl
       base = B8.unpack
@@ -159,6 +164,7 @@ toRow dDir rl =
      
   
 myDouble :: Double -> Cell
+{-# INLINE myDouble #-}
 myDouble d = if (snd $ properFraction d) == 0
              then number d
              else number $ read $ printf "%.3f" d

@@ -1,4 +1,4 @@
-{-# LANGUAGE NoMonomorphismRestriction #-}
+{-# LANGUAGE NoMonomorphismRestriction,BangPatterns #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : 
@@ -30,6 +30,7 @@ import MiRanda.Score
 import MiRanda.Diagram.LocalAU
 import Diagrams.Backend.Cairo
 import Diagrams.Backend.Cairo.Internal
+import Control.Parallel
 
 hW = 0.6
 hH = 1
@@ -76,10 +77,10 @@ recordDiagram re =
                in plotMultiAlign u us seedR siteR # centerXY) ss
         t = tableDiagram re
         vsep = 1
-        aPlot = scale (wt / wa) $ vcat' (CatOpts Cat vsep Proxy) as
+        aPlot = (scale (wt / wa) $ vcat' (CatOpts Cat vsep Proxy) as) :: Diagram Cairo R2
         wt = width t
         wa = maximum $ map width (as :: [Diagram Cairo R2])
-    in pad 1.01 $ t === strutY 1 === aPlot
+    in pad 1.01 (t === strutY 1 === aPlot)
 
 tableDiagram :: Record -> Diagram Cairo R2
 tableDiagram re =
