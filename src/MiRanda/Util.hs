@@ -25,35 +25,6 @@ import Data.Function
 import Data.Maybe
 import Data.Monoid
 
-recordFilter :: [(Record,[Conservation])] -> [(Record,[Conservation])]
-{-# INLINE recordFilter #-}
-recordFilter rcs =
-    filter ( not . null . snd) $
-    map
-    (\(r,cons) ->
-      let ss = predictedSites r
-          (ss',cons') = unzip $
-                          filter
-                          (\(s,con) ->
-                            case contextScorePlus s of
-                                Nothing -> -- 6mer,6mer offset and imperfect seed match
-                                    if branchLength con >= stringentBranchLengthCutOff
-                                    then True
-                                    else False
-                                Just csp ->
-                                    if contextPlus csp < 0 &&
-                                       branchLength con >= branchLengthCutOff
-                                    then True
-                                    else False
-                          ) $ zip ss cons
-          r' = r {predictedSites = ss'}
-      in (r',cons')
-    ) rcs
-  where 
-    stringentBranchLengthCutOff :: Double
-    stringentBranchLengthCutOff = 0.5
-    branchLengthCutOff :: Double
-    branchLengthCutOff = 0.3
 
 getGapRangeFromTrueRange :: Pair -> UTR -> (Int,Int)
 getGapRangeFromTrueRange p utr =
@@ -130,6 +101,8 @@ groupHomoSpWithSeedType s utr homos =
               sMStr = getSiteSeqAtSeedMatch al
               
           in (sMStr,(seedT,taxID))) $
+        -- 限制imperfect seed match 最多2个缺失
+        filter ((<= 2) . length . B8.findIndices (== '-') . fst) $
         map ((tToU . extractStr sPair . extractSeq) &&& taxonomyID) $ utr:homos
 
         
