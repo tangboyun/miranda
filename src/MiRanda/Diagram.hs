@@ -13,24 +13,26 @@
 -----------------------------------------------------------------------------
 
 module MiRanda.Diagram where
-import MiRanda.Util
-import MiRanda.Diagram.Alignment 
-import MiRanda.Diagram.Structure
-import MiRanda.Diagram.Pos
-import MiRanda.Diagram.Icon
-import MiRanda.Types
-import Data.Colour.Names
-import           Diagrams.Prelude hiding (align)
+
+import           Control.Parallel
+import           Control.Parallel.Strategies
 import qualified Data.ByteString.Char8 as B8
-import MiRanda.Util
-import Data.Char (isAlpha)
-import Data.List
-import Data.Function
-import MiRanda.Score
-import MiRanda.Diagram.LocalAU
-import Diagrams.Backend.Cairo
-import Diagrams.Backend.Cairo.Internal
-import Control.Parallel
+import           Data.Char (isAlpha)
+import           Data.Colour.Names
+import           Data.Function
+import           Data.List
+import           Diagrams.Backend.Cairo
+import           Diagrams.Backend.Cairo.Internal
+import           Diagrams.Prelude hiding (align)
+import           MiRanda.Diagram.Alignment
+import           MiRanda.Diagram.Icon
+import           MiRanda.Diagram.LocalAU
+import           MiRanda.Diagram.Pos
+import           MiRanda.Diagram.Structure
+import           MiRanda.Score
+import           MiRanda.Types
+import           MiRanda.Util
+import           MiRanda.Util
 
 hW = 0.6
 hH = 1
@@ -70,7 +72,7 @@ recordDiagram re =
     let ss = sortBy (compare `on` utrRange) $ predictedSites re
         u = utr re
         us = homoUTRs re
-        as = map
+        as = parMap rseq
              (\s ->
                let seedR = seedMatchRange s
                    siteR = utrRange s
@@ -80,7 +82,7 @@ recordDiagram re =
         aPlot = (scale (wt / wa) $ vcat' (CatOpts Cat vsep Proxy) as) :: Diagram Cairo R2
         wt = width t
         wa = maximum $ map width (as :: [Diagram Cairo R2])
-    in pad 1.01 (t === strutY 1 === aPlot)
+    in aPlot `par` t `pseq` pad 1.01 (t === strutY 1 === aPlot)
 
 tableDiagram :: Record -> Diagram Cairo R2
 tableDiagram re =
@@ -143,5 +145,7 @@ tableDiagram re =
                    )) ds
         vsep = 0.2
         hsep = 0.2
-    in centerXY $ vcat' (CatOpts Cat vsep Proxy) $ map (hcat' (CatOpts Cat hsep Proxy)) $ hs : dss
+    in centerXY $
+       vcat' (CatOpts Cat vsep Proxy) $
+       map (hcat' (CatOpts Cat hsep Proxy)) $ hs : dss
 

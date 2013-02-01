@@ -15,8 +15,9 @@
 module MiRanda.IO where
 
 import           Control.Arrow
-import           Control.Concurrent.Async
+import           Control.Concurrent
 import           Control.Monad
+import           Control.Parallel.Strategies
 import           Data.Attoparsec.ByteString.Char8
 import qualified Data.ByteString.Char8 as B8
 import           Data.ByteString.Lazy (ByteString)
@@ -27,9 +28,11 @@ import           Data.Char
 import           Data.Function
 import qualified Data.IntMap.Strict as IM
 import           Data.List
+import           Data.List.Split
 import           Data.Maybe
 import           Data.Monoid
 import           Data.Time
+import           GHC.Conc
 import           MiRanda.Diagram
 import           MiRanda.Parameter
 import           MiRanda.Parser
@@ -46,9 +49,8 @@ import           System.IO
 import           System.Process
 import           Text.Printf
 import           Text.XML.SpreadsheetML.Writer (showSpreadsheet)
-import GHC.Conc
-import Control.Parallel.Strategies
-import Data.List.Split
+
+data Token = Token
 
 toOutPut :: String -> FilePath -> FilePath -> [MRecord] -> IO ()
 {-# INLINE toOutPut #-}
@@ -58,38 +60,41 @@ toOutPut spe allUTRFile outPath mRs =
         targetFile = outPath </> "Target Genes.xml"
         siteFile = outPath </> "Target Sites.xml"
         hRef = dDir
+        nThreadDraw = 1
+        -- cairo 1.12.10 并发写pdf导致吐核
+        -- 也许以后可以,这是一个主要性能瓶颈
+        -- testIO: cairo-hash.c:506:
+        -- _cairo_hash_table_lookup_exact_key: Assertion `!"reached"' failed.
+        n = nThreadDraw + 2
     in do
         (rfs,sis) <- readUTRs allUTRFile (map _mRNA mRs) >>=
               return .
               (toRefLines &&& toSiteLines) .
               (\ss -> zip ss (getConservations ss)) . recordFilter . toRecord spe mRs
         mkdir outP
-        a1 <- async $
-              writeFile targetFile $ showSpreadsheet $
-              mkTargetWorkbook hRef $ withStrategy (evalList rseq) rfs
-        a2 <- async $
-              writeFile siteFile $ showSpreadsheet $
-              mkSiteWorkbook hRef sis
-        a3 <- async $ do
-            rs' <- readUTRs allUTRFile (map _mRNA mRs) >>= 
-                  return . recordFilter . toRecord spe mRs
-            toDiagrams outP rs'
+        
+        allMVs@(mv1:mv2:mvs) <- sequence $ replicate n newEmptyMVar
+
+        _ <- forkOS $ do
+            writeFile targetFile $ showSpreadsheet $
+                mkTargetWorkbook hRef rfs
+            putMVar mv1 Token
             
-              -- (rs1,rs2) <- readUTRs allUTRFile (map _mRNA mRs) >>= 
-              --              return .
-              --              ((map snd) *** (map snd)) .
-              --              partition (odd . fst) . zip [1..] .
-              --              recordFilter . toRecord spe mRs
-              -- a4 <- async $
-              --       toDiagrams outP rs1
-              -- a5 <- async $
-              --       toDiagrams outP rs2
-              -- wait a4
-              -- wait a5
-        wait a1
-        wait a2
-        wait a3
-        return ()
+        _ <- forkOS $ do
+            writeFile siteFile $ showSpreadsheet $
+                mkSiteWorkbook hRef sis
+            putMVar mv2 Token
+
+        rss <- readUTRs allUTRFile (map _mRNA mRs) >>= 
+               return . zip mvs .
+               splitList nThreadDraw . recordFilter . toRecord spe mRs
+               
+        forM_ rss $ \(mv,rs) -> 
+            forkOS $ do
+                toDiagrams outP rs
+                putMVar mv Token
+
+        sequence_ $ map takeMVar allMVs
 
 splitList :: Int -> [a] -> [[a]]
 splitList n ls =
@@ -142,9 +147,9 @@ mkdir = createDirectoryIfMissing True
     
 toDiagrams :: FilePath -> [Record] -> IO ()
 toDiagrams outP rs =
-    mapM_ (\(d,outF) -> rend outF d) $
+    mapM_ (\(outF,d) -> rend outF d) $
     withStrategy (parBuffer numCapabilities rseq) $
-    map
+    map 
     (\r ->
       let mid = miRNA r
           sy = geneSymbol $ utr r
@@ -152,9 +157,9 @@ toDiagrams outP rs =
           base = B8.unpack
                  (mid <> " vs " <>
                   re <> "(" <> sy <> ")") <.> "pdf"
-          !outF = outP </> base
-          !d = recordDiagram r
-      in (d,outF)) rs
+          outF = outP </> base
+          d = recordDiagram r
+      in (outF,d)) rs
     
 
 -- TargetScan网站上的坐标是1based, NOT 0 based

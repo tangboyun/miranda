@@ -36,6 +36,7 @@ import           MiRanda.Util
 import           MiRanda.Types
 import           Text.Printf
 import Diagrams.TwoD.Text
+import Data.Monoid (mappend)
 
 aColor = red
 gColor = green
@@ -183,11 +184,17 @@ plotMultiAlign !utr !utrs !seedRange !siteRange =
       names = init nameStrs
       con   = last nameStrs
       utrs' = sortBy
-              (compare `on`
-               -- 这里可能用个聚类更好些
---               ((diff (P exBeg exEnd) (extractSeq utr)) . extractSeq)) $ -- 以整个plot片段最近邻排序              
-               ((diff (P siteBeg siteEnd) (extractSeq utr)) . extractSeq)) $ -- 以site位点最近邻排序
-              utrs
+              (\a b ->
+                -- 这里可能用个聚类更好些
+                (compare `on`
+                 ((diff (P seedBeg seedEnd) -- 以seed位点最近邻排序
+                   (extractSeq utr)) . extractSeq)) a b `mappend` 
+                (compare `on`
+                 ((diff (P siteBeg siteEnd) -- 以site位点最近邻排序
+                   (extractSeq utr)) . extractSeq)) a b `mappend` 
+                (compare `on`
+                 ((diff (P exBeg exEnd) -- 以整个plot片段最近邻排序              
+                   (extractSeq utr)) . extractSeq)) a b ) utrs
       seqStr = extractSeq utr
       ss = utr:utrs'
       s = UV.postscanl (+) 0 $ UV.fromList $
