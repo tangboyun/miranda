@@ -67,9 +67,9 @@ plotLocalAU utr st (P up' dn') =
           M8 -> dn'
           M7M8 -> dn' - 1
           M7A1 -> dn'
-          M6 -> dn' - 1
-          M6O -> dn' - 2
-          Imperfect -> dn' - 1
+          M6 -> dn'
+          M6O -> dn'
+          Imperfect -> dn'
       str = map toUpper $ B8.unpack $
             B8.take (dn - up) $ B8.drop up utr
       (us,ds) = let ls = map (1/) [2.0..]

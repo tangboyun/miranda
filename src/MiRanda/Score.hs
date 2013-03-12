@@ -221,10 +221,9 @@ getAUScoreImpl st (P up' dn') utr =
           M8 -> dn'
           M7M8 -> dn' - 1
           M7A1 -> dn'
-          M6 -> dn' - 1
-          M6O -> dn' - 2
-          Imperfect -> dn' - 1
-
+          M6 -> dn'
+          M6O -> dn'
+          Imperfect -> dn'
       (us,ds) = let ls = map (1/) [2.0..]
                     ls1 = 1:ls
                     ls2 = 0.5:ls
