@@ -64,7 +64,7 @@ mkSiteWorkbook dDir rs | (not $ null rs) =
               # addStyle (Name "con") conCell
               # addStyle (Name "therm") thermCell
               # addStyle (Name "gene") geneCell
-
+              # addStyle (Name "ref") refCell
 
 headLine miID = mkRow
                 [string ("Predicted Sites for " ++ miID)
@@ -151,7 +151,7 @@ toRow !dDir !sl =
   in mkRow $
      string (B8.unpack r) :
      string (B8.unpack s) :
-     href path showStr :
+     href path showStr # withStyleID "ref" :
      string (show (i,j)) :
      string (show st) :
      fromMaybe emptyCell (fmap (myDouble . siteTypeContribPlus) csp) :

@@ -16,6 +16,7 @@ module MiRanda.Sheet.Styles
 import Data.Colour.Names
 import Text.XML.SpreadsheetML.Builder
 import Text.XML.SpreadsheetML.Types
+import Text.XML.SpreadsheetML.Util
 
 defaultS = emptyStyle { fontName = Just "Times New Roman"
                       , fontFamily = Just "Roman"
@@ -50,3 +51,4 @@ contCell = title { bgColor = Just darkorchid }
 rawCell = title { bgColor = Just orchid }
 thermCell = title { bgColor = Just aquamarine }
 
+refCell = defaultS { fontColor = Just blue}

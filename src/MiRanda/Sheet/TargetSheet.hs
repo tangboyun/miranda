@@ -66,6 +66,7 @@ mkTargetWorkbook dDir rs | (not $ null rs) =
               # addStyle (Name "anno") annoCell
               # addStyle (Name "con") conCell
               # addStyle (Name "poor") poorCell
+              # addStyle (Name "ref") refCell
               
 headLine miID = mkRow
                 [string ("Target genes for " ++ miID)
@@ -154,7 +155,7 @@ toRow !dDir !rl =
   in mkRow $
      string (B8.unpack r) :
      string (B8.unpack s) :
-     href path showStr :
+     href path showStr # withStyleID "ref" :
      number ns : csp : c :
      myDouble stru : myDouble free :
      myDouble bl : pc :
