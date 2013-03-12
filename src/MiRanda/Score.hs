@@ -212,13 +212,18 @@ getAUScoreImpl :: SeedType -> Pair -> ByteString -> AUScore
 getAUScoreImpl st (P up' dn') utr =
   let up = case st of
           M8 -> up' 
-          M7M8 -> up' 
+          M7M8 -> up'
+          M7A1 -> up' - 1
           M6O -> up'
-          _ -> up' - 1
+          M6 -> up'
+          Imperfect -> up'
       dn = case st of
           M8 -> dn'
+          M7M8 -> dn' - 1
           M7A1 -> dn'
-          _ -> dn' - 1
+          M6 -> dn' - 1
+          M6O -> dn' - 2
+          Imperfect -> dn' - 1
 
       (us,ds) = let ls = map (1/) [2.0..]
                     ls1 = 1:ls

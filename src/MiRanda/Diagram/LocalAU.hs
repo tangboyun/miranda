@@ -61,13 +61,17 @@ plotLocalAU utr st (P up' dn') =
           M7M8 -> up'
           M7A1 -> up' - 1
           M6O -> up'
-          _ -> up' - 1
+          M6 -> up'
+          Imperfect -> up'
       dn = case st of
           M8 -> dn'
           M7M8 -> dn' - 1
           M7A1 -> dn'
-          _ -> dn' - 1
-      str = B8.unpack $ B8.take (dn - up) $ B8.drop up utr
+          M6 -> dn' - 1
+          M6O -> dn' - 2
+          Imperfect -> dn' - 1
+      str = map toUpper $ B8.unpack $
+            B8.take (dn - up) $ B8.drop up utr
       (us,ds) = let ls = map (1/) [2.0..]
                     ls1 = 1:ls
                     ls2 = 0.5:ls
@@ -106,7 +110,8 @@ plotLocalAU utr st (P up' dn') =
       middle = stringM seedColor monoFont str # centerX # alignB
       step1 = beside unit_X middle lhs
       step2 = beside unitX step1 rhs
-  in centerXY $ step2 === stringS fColor serifFont (show st) # centerX
+  in centerXY $ step2 ===
+     stringS fColor serifFont (show st) # centerX
 
    -- centerXY $ localU ||| strutX sep |||
    --   (stringM seedColor monoFont str # centerX ===
