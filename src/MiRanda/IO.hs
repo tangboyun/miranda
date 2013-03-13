@@ -49,12 +49,13 @@ import           System.IO
 import           System.Process
 import           Text.Printf
 import           Text.XML.SpreadsheetML.Writer (showSpreadsheet)
-
+import qualified Data.HashMap.Strict as H
+import qualified Data.Vector as V
 data Token = Token
 
-toOutPut :: String -> FilePath -> FilePath -> [MRecord] -> IO ()
+toOutPut :: String -> FilePath -> FilePath -> (FilePath -> [Record] -> IO ()) -> [MRecord] -> IO ()
 {-# INLINE toOutPut #-}
-toOutPut spe allUTRFile outPath mRs =
+toOutPut spe allUTRFile outPath func mRs =
     let dDir = "Diagrams"
         outP = outPath </> dDir
         targetFile = outPath </> "Target Genes.xml"
@@ -91,7 +92,7 @@ toOutPut spe allUTRFile outPath mRs =
                
         forM_ rss $ \(mv,rs) -> 
             forkOS $ do
-                toDiagrams outP rs
+                func outP rs
                 putMVar mv Token
 
         sequence_ $ map takeMVar allMVs
@@ -114,23 +115,24 @@ recordFilter rs =
     (\(r,cons) ->
       let ss = predictedSites r
           (ss',cons') = unzip $
-                          filter
-                          (\(s,con) ->
-                            let scoreBool = 
-                                    case contextScorePlus s of
-                                        Nothing -> -- 6mer,6mer offset and imperfect seed match
-                                            if branchLength con >= stringentBranchLengthCutOff
-                                            then True
-                                            else False
+                        filter
+                        (\(s,con) ->
+                          let scoreBool = 
+                                  case contextScorePlus s of
+                                        Nothing -> True
+                                            -- 6mer,6mer offset and imperfect seed match
+                                            -- if branchLength con >= stringentBranchLengthCutOff
+                                            -- then True
+                                            -- else False
                                         Just csp ->
                                             if contextPlus csp < 0 
                                             then True
                                             else False
-                                (P b e) = seedMatchRange s
-                                posBool = b >= 30 &&
-                                          (l - e) >= 30
-                            in scoreBool && posBool
-                          ) $ zip ss cons
+                              (P b e) = seedMatchRange s
+                              posBool = b >= 30 &&
+                                        (l - e) >= 30
+                          in scoreBool && posBool
+                        ) $ zip ss cons
           l = length $ B8.findIndices isAlpha $ extractSeq $ utr r
           r' = r {predictedSites = ss'}
       in (r',cons')
@@ -144,7 +146,23 @@ recordFilter rs =
 
 mkdir :: FilePath -> IO ()
 mkdir = createDirectoryIfMissing True
-    
+
+toDiagramsLnc :: FilePath -> [Record] -> IO ()
+toDiagramsLnc outP rs =
+    mapM_ (\(outF,d) -> rend outF d) $
+    withStrategy (parBuffer numCapabilities rseq) $
+    map 
+    (\r ->
+      let mid = miRNA r
+          sy = geneSymbol $ utr r
+          re = refSeqID $ utr r
+          base = B8.unpack
+                 (mid <> " vs " <>
+                  re <> "(" <> sy <> ")") <.> "pdf"
+          outF = outP </> base
+          d = tableDiagram r
+      in (outF,d)) rs
+
 toDiagrams :: FilePath -> [Record] -> IO ()
 toDiagrams outP rs =
     mapM_ (\(outF,d) -> rend outF d) $
@@ -202,9 +220,6 @@ toTargetScanOutFormat =
                "SPSContrib" <> "\t" <> "ContextPlus" <> "\t" <>
                "BL" <> "\t" <> "Pct" <> "\t" <> "IsConseved"
 
-        
-
-
 mkProcess :: FilePath -> FilePath -> IO CreateProcess
 mkProcess miRFile utrFile = do
   prog <- findExecutable "miranda"
@@ -215,8 +230,6 @@ mkProcess miRFile utrFile = do
       in return $
          CreateProcess cmdSpec Nothing Nothing
          Inherit (CreatePipe) Inherit False False
-
-      
 
 miRNAPredict :: String -> Fasta -> FilePath -> IO [MRecord]
 miRNAPredict spe miFasta@(Fasta sid _) allUTRFile =
@@ -255,11 +268,6 @@ mRecordFilter mrs =
                              then True
                              else False
                       other -> True
-                          -- let (PairScore p) = getPairScore other $!
-                          --                     _align s
-                          -- in if p >= 0
-                          --    then True
-                          --    else False
                 ) ss
       in mr {sites=ss'}) mrs
 
@@ -279,38 +287,39 @@ orgToTaxID !s =
   map (\(i,l) -> (commonName l,i)) $! IM.toList taxMap
 {-# INLINE orgToTaxID #-}
 
+
 toRecord :: String -> [MRecord] -> [[UTR]] -> [Record]
 {-# INLINE toRecord #-}
 toRecord str mRs utrSets =
   zipWith f mRs utrSets
   where
-    toSites !mR !utr =
-      let !mRL = mRNALen mR
-      in map
-         (\mSite ->
-           let !mS = _mScore mSite
-               !rawS = getRawScore utr mRL mSite
-               !st = _seedType mSite
-               !cS = getContextScore st rawS
-               !csP = getContextScorePlus st al rawS
-               !sR = getSeedMatchSite mSite
-               !uR = _mRNARange mSite
-               !m = _match mSite
-               !al = _align mSite
-           in Site mS rawS cS csP sR uR m st al
-         ) (sites mR)
-      
-    f !mR !utrSet =
-      let !utrID = _mRNA mR
-          !miID = _miRNA mR
-          (!lhs,!rhs) = partition ((== orgToTaxID str) . taxonomyID) utrSet
-          !ss = toSites mR (head lhs)
+    f mR utrSet =
+      let utrID = _mRNA mR
+          miID = _miRNA mR
+          (lhs,rhs) = partition ((== orgToTaxID str) . taxonomyID) utrSet
+          ss = toSites (mRNALen mR) (head lhs) (sites mR)
       in if null lhs
          then error $ (show mR ++ "\n\n" ++ show utrSet)
          else Record miID utrID (head lhs) (rhs) ss
-          
+
+toSites :: Int -> UTR -> [MSite] -> [Site]
+toSites mRNALength utr =
+    map
+    (\mSite ->
+      let mS = _mScore mSite
+          rawS = getRawScore utr mRL mSite
+          st = _seedType mSite
+          cS = getContextScore st rawS
+          csP = getContextScorePlus st al rawS
+          sR = getSeedMatchSite mSite
+          uR = _mRNARange mSite
+          m = _match mSite
+          al = _align mSite
+      in Site mS rawS cS csP sR uR m st al)
+
+
 readUTRs :: FilePath -> [B8.ByteString] -> IO [[UTR]]
-readUTRs !fp !genes =
+readUTRs fp genes =
   L8.readFile fp >>=
   return . myFilter genes .
   groupBy ((==) `on` refSeqID) . toUTRs
@@ -350,26 +359,11 @@ toUTRs = map
           ) . (L8.split '\t')) . tail . L8.lines 
 
 toFastas :: [UTR] -> ByteString
-toFastas = toLazyByteString . intercalate '\n' .
+toFastas = renderFastas .
            map (\utr ->
-                 charUtf8 '>' <> byteString (refSeqID utr) <>
-                 charUtf8 '\n' <>
-                 alignToSeq utr <>
-                 charUtf8 '\n'
+                 Fasta (refSeqID utr) $ B8.filter isAlpha $
+                 unGS $ alignment utr
                )
-  where
-    lineLen = 70
-    intercalate _ [] = mempty
-    intercalate c (b:bs) = b <> charUtf8 c <>
-                           intercalate c bs
-    alignToSeq = splitEvery 70 . B8.filter isAlpha .
-                 (\(GS str) -> str) . alignment
-    splitEvery n bstr = let (h,t) = B8.splitAt n bstr
-                        in if B8.null t
-                           then byteString h
-                           else byteString h <>
-                                charUtf8 '\n' <>
-                                splitEvery n t
 
 countGene :: ByteString -> Int
 countGene str = if L8.null str
@@ -398,3 +392,32 @@ writeMiR fp f =
   B8.writeFile fp $ 
   (B8.cons '>' $ seqlabel f) `B8.append` "\n" `B8.append`
   (unSD $ seqdata f)
+
+-- quick hack
+mkUTRFile :: String -> FilePath -> FilePath -> FilePath -> IO ()
+mkUTRFile spe arrayFasta arrayAnno outUTR = do
+    fseqs <- readFasta arrayFasta
+    str <- L8.readFile arrayAnno
+    let fHash = H.fromList $ zip (map (L8.fromStrict.seqlabel) fseqs) $ map (L8.fromStrict . unSD . seqdata) fseqs
+        atV = (V.!)
+        h = "Refseq ID\tGene ID\tGene Symbol\tSpecies ID\tUTR sequence"
+        ls = map
+             (\v ->
+                L8.intercalate "\t"
+                [v `atV` 0 -- ProbeID
+                ,v `atV` 2 -- Seqname
+                ,v `atV` 3 -- GeneSymbol
+                ,L8.pack $ show $ orgToTaxID spe
+                ,fHash H.! (v `atV` 2)] 
+             ) $
+             sortBy (compare `on` (`atV` 0)) $
+             map V.fromList $
+             filter
+             (\ls ->
+               length ls > 1 &&
+               (head $ tail ls) == "noncoding"
+             ) $
+             map (L8.split '\t') $
+             tail $ L8.lines $ L8.filter (/= '\r') str
+    L8.writeFile outUTR $ L8.unlines $ h:ls
+--    L8.readFile outUTR >>= L8.writeFile outFasta . toFastas . toUTRs
