@@ -58,7 +58,40 @@ calcBranchLength = flip go
             
 -- | utr branch length and bin idx
 toBranchLength :: [Record] -> [(Double,Int)]
-toBranchLength records = map (func . ( utr &&& homoUTRs)) records
+{-# INLINE toBranchLength #-}
+toBranchLength records = map (getBranchLength . ( utr &&& homoUTRs)) records
+
+
+getBranchLength :: (UTR,[UTR]) -> (Double,Int)
+{-# INLINE getBranchLength #-}
+getBranchLength (ref,homo)=
+    let (refID,refSeq) = extract ref
+        is = B8.findIndices (/= '-') refSeq
+        n = B8.length refSeq - (B8.count '-' refSeq)
+        ts = filter (not . allGapsAt is) .
+             map extract $ homo
+        bs = fst $ foldl'
+             (\(acc,hMap) idx ->
+               let refN = refSeq `at` idx
+                          cs = sort $ map fst $
+                               filter ((== refN) . (`at` idx) . snd) ts
+               in if null cs
+                  then (0:acc,hMap)
+                  else let ids = refID:cs
+                           lookRe = H.lookup ids hMap
+                           v = case lookRe of
+                               Just value -> value
+                               Nothing -> calcBranchLength newick ids
+                           hMap' = case lookRe of
+                               Nothing -> H.insert ids v hMap
+                               _ -> hMap
+                       in (v:acc,hMap)
+             ) ([],H.empty) is
+        m = myMedian n $ sort bs
+        i = if m == 0
+            then 0
+            else (length $ takeWhile (< m) branchLenThresholds) - 1
+    in (m,i)
   where
     myMedian _ [] = 0
     myMedian l xs | odd l = xs !! ((l-1) `quot` 2)
@@ -69,33 +102,3 @@ toBranchLength records = map (func . ( utr &&& homoUTRs)) records
               (unGS . alignment)
     allGapsAt idxs (_,spSeq) =  all (== '-') $
                                 map (spSeq `at`) idxs
-    {-# INLINE func #-}
-    func (ref,homo)=
-        let (refID,refSeq) = extract ref
-            is = B8.findIndices (/= '-') refSeq
-            n = B8.length refSeq - (B8.count '-' refSeq)
-            ts = filter (not . allGapsAt is) .
-                 map extract $ homo
-            bs = fst $ foldl'
-                  (\(acc,hMap) idx ->
-                    let refN = refSeq `at` idx
-                        cs = sort $ map fst $
-                              filter ((== refN) . (`at` idx) . snd) ts
-                    in if null cs
-                       then (0:acc,hMap)
-                       else let ids = refID:cs
-                                lookRe = H.lookup ids hMap
-                                v = case lookRe of
-                                    Just value -> value
-                                    Nothing -> calcBranchLength newick ids
-                                hMap' = case lookRe of
-                                    Nothing -> H.insert ids v hMap
-                                    _ -> hMap
-                            in (v:acc,hMap)
-                  ) ([],H.empty) is
-            m = myMedian n $ sort bs
-            i = if m == 0
-                then 0
-                else (length $ takeWhile (< m) branchLenThresholds) - 1
-        in (m,i)
-{-# INLINE toBranchLength #-}

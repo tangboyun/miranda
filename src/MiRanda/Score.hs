@@ -67,10 +67,53 @@ checkConservation st bl =
         M7M8 -> bl >= 1.3
         _ -> bl >= 1.6
 {-# INLINE checkConservation #-}
-        
-getConservations :: [Record] -> [[Conservation]]
-{-# INLINE getConservations #-}
-getConservations records = go $ zip records (toBranchLength records)
+
+getConservation :: Int -> UTR -> [UTR] -> [Site] -> [Conservation]
+getConservation binIdx thisUTR otherUTRs =
+    let thisID = show . taxonomyID $ thisUTR
+    in map
+       (\s ->
+         let seed = extractSeedN8 . align $ s
+             sT = seedType s
+             tree = binTreeVec `atV` binIdx
+         in if sT /= M8
+            then let homoIDs = map show $
+                               getSpeciesWithSameSeedSeq s
+                               thisUTR otherUTRs
+                     bl = if null homoIDs
+                          then 0
+                          else calcBranchLength tree (thisID:homoIDs)
+                     isC = checkConservation sT bl
+                 in Con isC bl $ fmap (calcPct bl) $
+                    hashMapLookup sT seed
+            else let stSps = groupHomoSpWithSeedType s thisUTR otherUTRs
+                     bls = map
+                           (\(stype,ids) ->
+                             -- maybe include current id here ?
+                             let bl = if length ids == 1
+                                      then 0
+                                      else calcBranchLength tree $
+                                           map show ids
+                                 isC = checkConservation stype bl
+                             in (stype,bl,isC)
+                           ) stSps
+                     (_,bl,isC) = if null bls
+                                  then (M6,0,False)
+                                  else foldl1'
+                                       (\(a@(_,_,b1)) (b@(_,_,b2)) ->
+                                         if b1
+                                         then a
+                                         else if b2
+                                              then b
+                                              else a) bls
+                     thisPCT = if null bls
+                               then Nothing
+                               else last $ sort $
+                                    map (\(stype,thisBL,_) ->
+                                          fmap (calcPct thisBL) $
+                                          hashMapLookup stype seed
+                                        ) bls
+                 in Con isC bl thisPCT)
   where
     hashMapLookup st seedStr =
         let h1 = H.fromList pct8mer
@@ -81,57 +124,19 @@ getConservations records = go $ zip records (toBranchLength records)
             M7M8 -> H.lookup seedStr h2
             M7A1 -> H.lookup seedStr h3
             _ -> Nothing
-    go [] = []
-    go ((r,(_,binIdx)):res) =
+
+
+        
+getConservations :: [Record] -> [[Conservation]]
+{-# INLINE getConservations #-}
+getConservations records =
+    map
+    (\((r,(_,binIdx)):res) ->
         let thisUTR = utr r
-            thisID = show . taxonomyID $ thisUTR
             otherUTRs = homoUTRs r
             sites = predictedSites r
-            cons = map
-                    (\s ->
-                      let seed = extractSeedN8 . align $ s
-                          sT = seedType s
-                          tree = binTreeVec `atV` binIdx
-                      in if sT /= M8
-                         then let homoIDs = map show $!
-                                             getSpeciesWithSameSeedSeq s
-                                             thisUTR otherUTRs
-                                  bl = if null homoIDs
-                                        then 0
-                                        else calcBranchLength tree (thisID:homoIDs)
-                                  isC = checkConservation sT bl
-                             in Con isC bl $! fmap (calcPct bl) $!
-                                hashMapLookup sT seed
-                         else let stSps = groupHomoSpWithSeedType s thisUTR otherUTRs
-                                  bls = -- trace (show stSps) $
-                                      map
-                                      (\(stype,ids) ->
-                                       -- maybe include current id here ?
-                                        let bl = if length ids == 1
-                                                 then 0
-                                                 else calcBranchLength tree $
-                                                      map show ids
-                                            isC = checkConservation stype bl
-                                        in (stype,bl,isC)
-                                      ) stSps
-                                  (_,bl,isC) = if null bls
-                                               then (M6,0,False)
-                                               else foldl1'
-                                                    (\(a@(_,_,b1)) (b@(_,_,b2)) ->
-                                                      if b1
-                                                      then a
-                                                      else if b2
-                                                           then b
-                                                           else a) bls
-                                  thisPCT = if null bls
-                                            then Nothing
-                                            else last $ sort $
-                                                 map (\(stype,thisBL,_) ->
-                                                       fmap (calcPct thisBL) $
-                                                       hashMapLookup stype seed
-                                                     ) bls
-                              in Con isC bl thisPCT) sites
-        in cons : go res
+        in getConservation binIdx thisUTR otherUTRs) $
+    zip records (toBranchLength records)
 
 
 (!) :: IM.IntMap a -> IM.Key -> a
