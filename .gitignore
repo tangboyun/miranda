@@ -1,0 +1,13 @@
+cabal-dev/
+dist/
+*.hi
+*.o
+*~
+*.txt
+/.directory
+*.html
+*_flymake.hs
+*.pdf
+*.svg
+*.png
+*.xml
