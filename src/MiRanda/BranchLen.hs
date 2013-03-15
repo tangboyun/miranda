@@ -73,8 +73,8 @@ getBranchLength (ref,homo)=
         bs = fst $ foldl'
              (\(acc,hMap) idx ->
                let refN = refSeq `at` idx
-                          cs = sort $ map fst $
-                               filter ((== refN) . (`at` idx) . snd) ts
+                   cs = sort $ map fst $
+                        filter ((== refN) . (`at` idx) . snd) ts
                in if null cs
                   then (0:acc,hMap)
                   else let ids = refID:cs

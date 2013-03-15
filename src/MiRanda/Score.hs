@@ -131,11 +131,11 @@ getConservations :: [Record] -> [[Conservation]]
 {-# INLINE getConservations #-}
 getConservations records =
     map
-    (\((r,(_,binIdx)):res) ->
+    (\(r,(_,binIdx)) ->
         let thisUTR = utr r
             otherUTRs = homoUTRs r
             sites = predictedSites r
-        in getConservation binIdx thisUTR otherUTRs) $
+        in getConservation binIdx thisUTR otherUTRs sites) $
     zip records (toBranchLength records)
 
 

@@ -17,6 +17,9 @@ module MiRanda.Types where
 import Data.ByteString (ByteString)
 import Data.Vector.Unboxed
 import Data.Monoid
+import Data.Binary
+
+
 
 data RefLine = RL
   { rmiRID :: !ByteString
@@ -49,7 +52,8 @@ data SiteLine = SL
 
 data Gene = Gene 
   {syb :: !ByteString
-  ,ref :: !ByteString
+  ,ref :: !ByteString -- for lnc, this is probeID
+                     -- for mRNA, this is RefSeq
   } deriving (Show,Eq)
       
 data Conservation = Con
@@ -73,7 +77,7 @@ data UTR = UTR
 
 newtype GapSeq = GS
   {unGS :: ByteString
-  } deriving (Show,Eq)
+  } deriving (Show,Eq,Binary)
 
 newtype SeqData = SD
   { unSD :: ByteString }
@@ -202,22 +206,23 @@ data RawScore = RS
 
 newtype PairScore = PairScore
   {unPair :: Double
-  } deriving (Show,Eq,Ord,Additive)
+  } deriving (Show,Eq,Ord,Additive,Binary)
              
 newtype AUScore = AUScore
   {unAu :: Double
-  } deriving (Show,Eq,Ord,Additive)
+  } deriving (Show,Eq,Ord,Additive,Binary)
 
 newtype PosScore = PosScore
   {unPos :: Double
-  } deriving (Show,Eq,Ord,Additive)
+  } deriving (Show,Eq,Ord,Additive,Binary)
 
 newtype SPScore = SPScore Double
-                   deriving (Show,Eq,Ord,Additive)
+                   deriving (Show,Eq,Ord,Additive,Binary)
                             
 newtype TAScore = TAScore Double
-                   deriving (Show,Eq,Ord,Additive)
-                            
+                   deriving (Show,Eq,Ord,Additive,Binary)
+
+
 instance Show SeedType where
   show s =
     case s of

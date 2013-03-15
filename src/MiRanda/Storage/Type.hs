@@ -48,7 +48,7 @@ data MiRSites = MiRSites
   } deriving (Show,Eq)
              
 data Site = Site
-  { mirandaScore :: !MScore
+  { miRandaScore :: !MScore
   , conserveScore :: !Conservation
   , rawScore :: !RawScore
   , contextScore :: !(Maybe ContextScore)

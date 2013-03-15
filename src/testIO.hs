@@ -35,10 +35,12 @@ spec = "Human"
 inF = "/home/tangboyun/Dropbox/miRanda Test Data/miRNA.fa"
 --inF' = "/tmp/testmiR.txt"
 utrF = "/home/tangboyun/miRNAPrediction/UTR_Sequences.txt"
+arrayAnnoFile = "/tmp/microarray_033010_human_lncRNA_V2_annotation_20120105.txt"
+arrayFasta = "/tmp/microarray_033010_human_lncRNA_V2_transcript.fa"
 --utrF = "/home/tangboyun/Dropbox/miRanda Test Data/testUTR.txt"
 geneIDs = ["LIN28B"]
-
-utrF' = "/tmp/testUTR.txt"
+--allUTRFile = "/tmp/testAllUTR.txt"
+allUTRFile = "/tmp/testUTR.txt"
 
 main = do
  --   print $ getAUScoreImpl M7M8 (P 44 51) $ B8.filter (/= '-') utrS
@@ -53,7 +55,8 @@ main = do
 
 -- miRNAPredict spec (head fas) utrF >>= writeFile "/tmp/test.xml" . showSpreadsheet . mkSiteWorkbook "hsa-let-7i"
 -- miRNAPredict spec (head fas) utrF >>= writeFile "/tmp/test.xml" . showSpreadsheet . mkTargetWorkbook "Diagrams"
- miRNAPredict spec (head fas) utrF >>= toOutPut spec utrF "/tmp/testMiR"
+ mkUTRFile spec arrayFasta arrayAnnoFile allUTRFile
+ miRNAPredict spec (head fas) allUTRFile >>= toOutPut spec allUTRFile "/tmp/testMiR" toDiagramsLnc
 -- mkdir "/tmp/testMiR" >> miRNAPredict spec (head fas) utrF >>= toDiagrams "/tmp/testMiR" 
  
 -- rs <- miRNAPredict spec (head fas) utrF

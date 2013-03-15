@@ -271,15 +271,17 @@ mRecordFilter mrs =
                 ) ss
       in mr {sites=ss'}) mrs
 
-
+dumpUTRs :: String -> FilePath -> [UTR] -> IO ()
+dumpUTRs specName utrs outFile =
+    L8.writeFile outFile . toFastas .
+    filter
+    (\utr ->
+      taxonomyID utr == orgToTaxID specName
+    )
 dumpGenome :: String -> FilePath -> FilePath -> IO ()
 dumpGenome specName inFile outFile =
   L8.readFile inFile >>=
-  L8.writeFile outFile . toFastas .
-  filter
-  (\utr ->
-    taxonomyID utr == orgToTaxID specName
-  ) . toUTRs . L8.filter (/= '\r')
+  dumpUTRs specName outFile . toUTRs . L8.filter (/= '\r')
   
 orgToTaxID :: String -> Int
 orgToTaxID !s =
@@ -307,7 +309,7 @@ toSites mRNALength utr =
     map
     (\mSite ->
       let mS = _mScore mSite
-          rawS = getRawScore utr mRL mSite
+          rawS = getRawScore utr mRNALength mSite
           st = _seedType mSite
           cS = getContextScore st rawS
           csP = getContextScorePlus st al rawS
@@ -361,7 +363,7 @@ toUTRs = map
 toFastas :: [UTR] -> ByteString
 toFastas = renderFastas .
            map (\utr ->
-                 Fasta (refSeqID utr) $ B8.filter isAlpha $
+                 Fasta (refSeqID utr) $ SD $ B8.filter isAlpha $
                  unGS $ alignment utr
                )
 

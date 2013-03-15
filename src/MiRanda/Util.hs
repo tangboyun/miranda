@@ -16,6 +16,8 @@ module MiRanda.Util where
 
 import MiRanda.Types
 import qualified Data.ByteString.Char8 as B8
+import qualified Data.ByteString.Lazy.Char8 as L8
+import Data.ByteString.Lazy.Builder
 import Data.Char
 import qualified Data.Vector.Unboxed as UV
 import Data.ByteString (ByteString)
@@ -224,3 +226,27 @@ getSiteSeqAtSeedMatch al@(Align miR3' mR5' b) =
                 _    -> (1, 6)
       num = 1 + idxV `at` j
   in extractStr ((down - num),(down - idxV `at` i)) mR5'
+
+
+renderFastas :: [Fasta] -> L8.ByteString
+renderFastas =
+    toLazyByteString . intercalate '\n' .
+    map (\fa ->
+          charUtf8 '>' <> byteString (seqlabel fa) <>
+          charUtf8 '\n' <>
+          alignToSeq fa <>
+          charUtf8 '\n'
+        )
+  where
+    lineLen = 70
+    intercalate _ [] = mempty
+    intercalate c (b:bs) = b <> charUtf8 c <>
+                           intercalate c bs
+    alignToSeq = splitEvery 70 . B8.filter isAlpha .
+                 unSD . seqdata
+    splitEvery n bstr = let (h,t) = B8.splitAt n bstr
+                        in if B8.null t
+                           then byteString h
+                           else byteString h <>
+                                charUtf8 '\n' <>
+                                splitEvery n t
