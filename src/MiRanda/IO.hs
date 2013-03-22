@@ -272,12 +272,13 @@ mRecordFilter mrs =
       in mr {sites=ss'}) mrs
 
 dumpUTRs :: String -> FilePath -> [UTR] -> IO ()
-dumpUTRs specName utrs outFile =
+dumpUTRs specName  outFile =
     L8.writeFile outFile . toFastas .
     filter
     (\utr ->
       taxonomyID utr == orgToTaxID specName
     )
+    
 dumpGenome :: String -> FilePath -> FilePath -> IO ()
 dumpGenome specName inFile outFile =
   L8.readFile inFile >>=
@@ -354,11 +355,12 @@ preprocess = B8.intercalate "\n" . filter
 toUTRs :: ByteString -> [UTR]
 {-# INLINE toUTRs #-}
 toUTRs = map
-         ((\(refId:_:syb:tax:sdata:[]) ->
-            case L8.readInt tax of
-              Just (taxId,_) -> UTR (L8.toStrict syb) (L8.toStrict refId) taxId (GS $ L8.toStrict sdata)
-              _              -> error "Fail in parse UTR sequence."
-          ) . (L8.split '\t')) . tail . L8.lines 
+         (f . (L8.split '\t')) . tail . L8.lines . L8.filter (/= '\r')
+  where f (refId:_:syb:tax:sdata:[]) = case L8.readInt tax of
+                                       Just (taxId,_) -> UTR (L8.toStrict syb) (L8.toStrict refId) taxId (GS $ L8.toStrict sdata)
+                                       _              -> error "Fail in parse UTR sequence."
+        f other = error $ show other
+
 
 toFastas :: [UTR] -> ByteString
 toFastas = renderFastas .
