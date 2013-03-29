@@ -364,6 +364,7 @@ toUTRs = map
 
 toFastas :: [UTR] -> ByteString
 toFastas = renderFastas .
+           filter ((/= 0) . B8.length . unSD . seqdata) .
            map (\utr ->
                  Fasta (refSeqID utr) $ SD $ B8.filter isAlpha $
                  unGS $ alignment utr
@@ -408,8 +409,8 @@ mkUTRFile spe arrayFasta arrayAnno outUTR = do
         ls = map
              (\v ->
                 L8.intercalate "\t"
-                [v `atV` 0 -- ProbeID
-                ,v `atV` 2 -- Seqname
+                [v `atV` 2 -- Seqname
+                ,v `atV` 0 -- ProbeID
                 ,v `atV` 3 -- GeneSymbol
                 ,L8.pack $ show $ orgToTaxID spe
                 ,fHash H.! (v `atV` 2)] 
@@ -424,4 +425,3 @@ mkUTRFile spe arrayFasta arrayAnno outUTR = do
              map (L8.split '\t') $
              tail $ L8.lines $ L8.filter (/= '\r') str
     L8.writeFile outUTR $ L8.unlines $ h:ls
---    L8.readFile outUTR >>= L8.writeFile outFasta . toFastas . toUTRs

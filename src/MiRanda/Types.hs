@@ -18,7 +18,7 @@ import Data.ByteString (ByteString)
 import Data.Vector.Unboxed
 import Data.Monoid
 import Data.Binary
-
+import Control.DeepSeq
 
 
 data RefLine = RL
@@ -52,7 +52,7 @@ data SiteLine = SL
 
 data Gene = Gene 
   {syb :: !ByteString
-  ,ref :: !ByteString -- for lnc, this is probeID
+  ,ref :: !ByteString -- for lnc, this is SeqID (Seqname)
                      -- for mRNA, this is RefSeq
   } deriving (Show,Eq)
       
@@ -333,3 +333,38 @@ instance Ord Conservation where
         flip myCompare (pct con1) (pct con2)
     {-# INLINE compare #-}        
 
+instance NFData Gene where
+    rnf (Gene a b) = rnf a `seq` rnf b `seq` ()
+
+instance NFData UTR where
+    rnf (UTR a b c (GS d)) = rnf a `seq`
+                             rnf b `seq`
+                             rnf c `seq`
+                             rnf d `seq` ()
+                             
+instance NFData MScore where
+    rnf (MScore a b) = rnf a `seq` rnf b `seq` ()
+
+instance NFData Conservation where
+    rnf (Con a b c) = rnf a `seq` rnf b `seq` rnf c `seq` ()
+
+instance NFData RawScore where
+    rnf (RS (PairScore a) (AUScore b) (PosScore c)) =
+        rnf a `seq` rnf b `seq` rnf c `seq` ()
+
+instance NFData Pair where
+    rnf (P a b) = rnf a `seq` rnf b `seq` ()
+
+instance NFData SeedType where
+    rnf s = s `seq` ()
+    
+instance NFData Align where
+    rnf (Align a b c) =
+        rnf a `seq` rnf b `seq` rnf c `seq` ()
+
+instance NFData ContextScore where
+    rnf (CS !a !b !c !d !e) = ()
+
+instance NFData ContextScorePlus where
+    rnf (CSP !a !b !c !d !e !f !g) = ()
+    

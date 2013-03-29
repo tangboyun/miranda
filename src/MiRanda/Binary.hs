@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : ghc 7.6.2 can not derivng Binary instance automatically ...
@@ -21,13 +22,13 @@ import Control.Applicative
 import Data.Word
 import qualified Codec.Compression.Zlib as Z
 import Data.ByteString.Lazy (ByteString)
-
+import Control.DeepSeq
 
 compress :: Binary a => a -> ByteString
 {-# INLINE compress #-}
-compress v = Z.compressWith
-             Z.defaultCompressParams { Z.compressLevel = Z.bestCompression } $
-             encode v
+compress !v = Z.compressWith
+              Z.defaultCompressParams { Z.compressLevel = Z.bestCompression } $
+              encode v
              
 decompress :: Binary a => ByteString -> a
 {-# INLINE decompress #-}
@@ -206,3 +207,4 @@ instance Binary GeneRecord where
         put a
         put b
     get = GR <$> get <*> get
+
