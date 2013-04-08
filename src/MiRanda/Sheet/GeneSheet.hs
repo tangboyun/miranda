@@ -90,7 +90,7 @@ classLine = mkRow
              # mergeAcross 5
              # withStyleID "poor"
             ,string "Annotations"
-             # mergeAcross 1
+             # mergeAcross 3
              # withStyleID "anno"
             ]
 
@@ -116,6 +116,8 @@ nameCells = [string "Identity"
             ,string "6mer"
             ,string "Offset 6mer"
             ,string "Imperfect"
+            ,string "Rfam"
+            ,string "Family"
             ,string "isExperimentalValidated"
             ,string "Sequence"
             ]
