@@ -16,8 +16,6 @@ library
                        MiRanda.Sheet.Styles
                        MiRanda.Types
                        MiRanda.Util
-                       MiRanda.Parser
-                       MiRanda.Parameter
                        MiRanda.Score
                        MiRanda.Sheet.SiteSheet
                        MiRanda.Sheet.TargetSheet
@@ -28,6 +26,8 @@ library
                        MiRanda.Binary
                        MiRanda.Storage.IO
   other-modules:       
+                       MiRanda.Parser
+                       MiRanda.Parameter
                        MiRanda.BranchLen
                        MiRanda.Diagram.Icon
                        MiRanda.Diagram.Alignment
