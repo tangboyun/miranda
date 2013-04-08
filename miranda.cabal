@@ -26,6 +26,7 @@ library
   other-modules:       
                        MiRanda.Sheet.SiteSheet
                        MiRanda.Sheet.TargetSheet
+                       MiRanda.Sheet.GeneSheet
                        MiRanda.Sheet.Styles
                        MiRanda.Parser
                        MiRanda.Parameter
