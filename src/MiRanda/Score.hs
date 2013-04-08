@@ -46,19 +46,6 @@ calcPct :: Double -> (Double,Double,Double,Double) -> Double
 calcPct bl (b0,b1,b2,b3) = max 0 $ b0 + b1 / ( 1 + exp (negate b2 * bl + b3)) 
     
 
-binTreeVec :: V.Vector (NewickTree DefDecor)
-binTreeVec = V.fromList $
-             map parseNewick
-             [treeBin1
-             ,treeBin2
-             ,treeBin3
-             ,treeBin4
-             ,treeBin5
-             ,treeBin6
-             ,treeBin7
-             ,treeBin8
-             ,treeBin9
-             ,treeBin10]
 
 checkConservation :: SeedType -> Double -> Bool
 checkConservation st bl =
@@ -124,8 +111,19 @@ getConservation binIdx thisUTR otherUTRs =
             M7M8 -> H.lookup seedStr h2
             M7A1 -> H.lookup seedStr h3
             _ -> Nothing
-
-
+    binTreeVec :: V.Vector (NewickTree DefDecor)
+    binTreeVec = V.fromList $
+                 map parseNewick
+                 [treeBin1
+                 ,treeBin2
+                 ,treeBin3
+                 ,treeBin4
+                 ,treeBin5
+                 ,treeBin6
+                 ,treeBin7
+                 ,treeBin8
+                 ,treeBin9
+                 ,treeBin10]
         
 getConservations :: [Record] -> [[Conservation]]
 {-# INLINE getConservations #-}
