@@ -25,6 +25,7 @@ import           Data.ByteString.Lazy.Builder
 import           Data.ByteString.Lazy.Builder.ASCII
 import MiRanda.Util (renderFastas)
 import qualified MiRanda.Types as MT
+import Data.List
 
 emblsToMiRNAs :: [EMBL] -> [MiRNA]
 emblsToMiRNAs es =
@@ -34,10 +35,17 @@ emblsToMiRNAs es =
               CS _ -> error "error emblsToMiRNAs: not SQ"
               SQ _ b -> b
           fs = filter ((== "miRNA") . key) $ fromMaybe [] $ features e
-      in map (extractFromFeature s) fs
+          rf = case dbCrossRef e of
+              Nothing -> Nothing
+              Just rs ->
+                  case find ((== "RFAM") . externalDB) rs of
+                      Nothing -> Nothing
+                      Just (DBCrossRef _ rID fName) ->
+                          return $ Rfam rID $ fromMaybe "" fName
+      in map (extractFromFeature rf s) fs
       ) es
     where
-      extractFromFeature str f =
+      extractFromFeature rfam str f =
           let vM = M.fromList $ valuePairs f
               (beg,end) = case B8.readInt $ locationStr f of
                   Just (i,str) -> case B8.readInt $ B8.dropWhile (== '.') str of
@@ -49,6 +57,7 @@ emblsToMiRNAs es =
              (removeP $ vM M.! "product") 
              (removeP $ vM M.! "accession")
              (vM M.! "evidence" == "experimental")
+             rfam
              (B8.take (end-beg) $ B8.drop beg str)
 
 toFastas :: [MiRNA] -> L8.ByteString

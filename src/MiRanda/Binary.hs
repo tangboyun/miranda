@@ -164,12 +164,19 @@ instance Binary ST.Site where
           get
 
 instance Binary MiRNA where
-    put (MiRNA a b c d) = do
+    put (MiRNA a b c d e) = do
         put a
         put b
         put c
         put d
-    get = MiRNA <$> get <*> get <*> get <*> get
+        put e
+    get = MiRNA <$> get <*> get <*> get <*> get <*> get
+
+instance Binary Rfam where
+    put (Rfam a b) = do
+        put a
+        put b
+    get = Rfam <$> get <*> get
     
 instance Binary MiRSites where
     put (MiRSites a b) = do

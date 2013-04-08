@@ -65,9 +65,14 @@ data MiRNA = MiRNA
   { identity :: !ByteString -- "product" in miRBase feature
   , accession :: !ByteString -- miRBase accession id
   , isExperimentalValidated :: !Bool
+  , family :: !(Maybe Rfam)
   , seqdata :: !ByteString
   } deriving (Show,Eq)
 
+data Rfam = Rfam
+  { rFamID :: !ByteString
+  , miRNAFamily :: !ByteString
+  } deriving (Show,Eq)
 
 instance NFData GeneRecord where
     rnf (GR gi mS) = rnf gi `seq` rnf mS `seq` ()
@@ -78,8 +83,11 @@ instance NFData GeneInfo where
 instance NFData Expression where
     rnf a = a `seq` ()
 
+instance NFData Rfam where
+    rnf (Rfam a b) = rnf a `seq` rnf b `seq` ()
+    
 instance NFData MiRNA where
-    rnf (MiRNA a b c d) = rnf a `seq` rnf b `seq` rnf c `seq` rnf d `seq` ()
+    rnf (MiRNA a b c d e) = rnf a `seq` rnf b `seq` rnf c `seq` rnf d `seq` rnf e `seq` ()
 
 instance NFData Site where
     rnf (Site a b c d e f g h i) =

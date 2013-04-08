@@ -75,9 +75,9 @@ dumpDB spe utrFile miRBase outDB = do
     hClose h1
     (utrFasta,h2) <- openTempFile tmpDir "UTR.fa"
     hClose h2
-    
     L.readFile miRBase >>=
-        L8.writeFile miFasta . toFastas .
+    -- 不同前体可能产生相同miRNA成熟体
+        L8.writeFile miFasta . toFastas . nubBy ((==) `on` accession) .
         emblsToMiRNAs . filterEMBL spe3 . extractEMBL . GZ.decompress
 
     L.readFile utrFile >>=
@@ -90,23 +90,14 @@ dumpDB spe utrFile miRBase outDB = do
     utrss <- L.readFile utrFile >>=
              return .
              groupBy ((==) `on` refSeqID) . toUTRs . GZ.decompress
-    
+    -- should add family info here
     miRHash <- L.readFile miRBase >>=
                return . H.fromList .
                map (identity &&& id) .
                emblsToMiRNAs . filterEMBL spe3 . extractEMBL . GZ.decompress
     L.writeFile outDB $
-    -- mapM_ (\v -> do
-    --         c <- readIORef counter
-                 
-    --         print c
-    --         writeIORef counter (c+1)
-    --       ) $
-    --     byteStringToGRs $
-    --     GZ.decompress $
         GZ.compressWith GZ.defaultCompressParams {GZ.compressLevel = GZ.bestCompression} $
         L.concat $ map encode $
---        withStrategy (evalBuffer 1 rdeepseq) $ 
         map
         (\(utrs,mRs) ->
           let (lhs,rhs) = partition ((== orgToTaxID spe) . taxonomyID) utrs
@@ -127,31 +118,6 @@ dumpDB spe utrFile miRBase outDB = do
           in gr
         ) $ toPairs utrss $
         groupBy ((==) `on` _mRNA) mRs
-        
-        -- (forM utrss $ \us -> do
-        --     let (lhs,rhs) = partition ((== orgToTaxID spe) . taxonomyID) us
-        --         u = case lhs of
-        --             [] -> error $ "dumpDB : no utr is" ++ spe
-        --             (u':_) -> u'
-        --         binIdx = snd $ getBranchLength (u,rhs)
-        --         exp = if "NM_" `B8.isPrefixOf` (refSeqID u)
-        --               then Coding
-        --               else NonCoding
-        --         gInfo = GI (Gene (geneSymbol u) (refSeqID u)) exp u rhs
-
-        --     L8.writeFile utrFasta $ MI.toFastas [u]
-    
-        --     runMiRanda miFasta utrFasta >>=
-        --         return . GR gInfo .
-        --         map
-        --         (\mr ->
-        --           let mRNAL = mRNALen mr
-        --               mir = _miRNA mr
-        --               ss = MI.toSites mRNAL u $ MT.sites mr
-        --               cs = getConservation binIdx u rhs ss
-        --           in MiRSites (miRHash H.! mir) $ map toSite $ zip ss cs)
-        -- )
-            
 
     
 toPairs _ [] = []
