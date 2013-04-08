@@ -11,5 +11,12 @@
 --
 -----------------------------------------------------------------------------
 
-module MiRanda.Sheet where
+module MiRanda.Sheet
+       (
+         module MiRanda.Sheet.TargetSheet
+       , module MiRanda.Sheet.SiteSheet
+       ) 
+       where
 
+import MiRanda.Sheet.TargetSheet
+import MiRanda.Sheet.SiteSheet

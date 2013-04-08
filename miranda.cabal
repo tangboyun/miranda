@@ -13,12 +13,10 @@ cabal-version:       >=1.8
 
 library
   exposed-modules:   
-                       MiRanda.Sheet.Styles
                        MiRanda.Types
                        MiRanda.Util
                        MiRanda.Score
-                       MiRanda.Sheet.SiteSheet
-                       MiRanda.Sheet.TargetSheet
+                       MiRanda.Sheet
                        MiRanda.Diagram
                        MiRanda.IO
                        MiRanda.Storage.Type
@@ -26,6 +24,9 @@ library
                        MiRanda.Binary
                        MiRanda.Storage.IO
   other-modules:       
+                       MiRanda.Sheet.SiteSheet
+                       MiRanda.Sheet.TargetSheet
+                       MiRanda.Sheet.Styles
                        MiRanda.Parser
                        MiRanda.Parameter
                        MiRanda.BranchLen
