@@ -301,8 +301,12 @@ instance Additive Conservation where
     add (Con !a1 !b1 !c1) (Con !a2 !b2 !c2) =
         let !a = a1 `add` a2
             !b = b1 `add` b2
-            !c = c1 `add` c2
+            !c = addPct c1 c2
         in Con a b c
+      where
+        addPct (Just pct1) (Just pct2) = Just $ 1 - (1-pct1)*(1-pct2)
+        addPct p1@(Just _) _ = p1
+        addPct _ p2@(Just _) = p2
     {-# INLINE add #-}
 
 instance Ord RefLine where
