@@ -241,7 +241,7 @@ plotMultiAlign !utr !utrs !seedRange !siteRange =
       (beforeSite:siteStr:afterSite:[]) = splitPlacesBlanks
                                        [siteRB
                                        ,siteRE - siteRB
-                                       ,(B8.length $ head strs)-siteRE]
+                                       ,(B8.length $ myHead strs)-siteRE]
                                        seqStas
       maxH = 4 * h * (maximum $
                       map (\(a,c,g,t,u) -> maximum [a,c,g,t,u]) seqStas)
@@ -261,7 +261,7 @@ plotMultiAlign !utr !utrs !seedRange !siteRange =
                       !t = count ((== 'T') . toUpper) / n
                       !u = count ((== 'U') . toUpper) / n
                   in (a,c,g,t,u)
-                 ) [0..(B8.length $ head strs)-1]
+                 ) [0..(B8.length $ myHead strs)-1]
       at = (IM.!)
       dMatrix = map (plotOneChain siteStas) chss
       fstLine = (\(a:b:c:d:e:[]) ->
@@ -283,7 +283,10 @@ plotMultiAlign !utr !utrs !seedRange !siteRange =
                      hcat a # alignB ||| dM # alignB |||
                      hcat e # alignB
                   ) $
-                toFivePart $ head dMatrix
+                toFivePart $ myHead dMatrix
+      myHead ls = if null ls
+                  then error "Alignment.hs"
+                  else head ls
       tailLs = map (centerX . hcat) $ tail dMatrix
       charStas = hcat' (CatOpts Distrib monoW Proxy) $
                  plotSeqStas True beforeSite ++
