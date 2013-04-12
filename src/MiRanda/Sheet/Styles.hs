@@ -52,3 +52,12 @@ rawCell = title { bgColor = Just orchid }
 thermCell = title { bgColor = Just aquamarine }
 
 refCell = defaultS { fontColor = Just blue}
+commentCell = defaultS
+  {
+    bgColor = Just khaki
+--    bgColor = Just $ sRGB24 255 255 156
+  , vAlign = Just "Top"
+  , hAlign = Just "Left"
+  , wrapText = Just True
+  , fontSize = Just 10
+  }
