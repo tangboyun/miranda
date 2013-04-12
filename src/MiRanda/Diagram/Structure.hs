@@ -131,12 +131,25 @@ renderMiRNA ali@(Align miR3' utr5' b) =
      renderSeed3' seed |||
      string rhs ||| string "-5' miRNA"
 
+
+-- workaround fix
 renderUTR s ali@(Align miR3' utr5' b) (P up dn) =
-  let (lhs:pair:loop:seed:rhs:[]) = splitPlaces (lengthOfEach ali) $
-                                              B8.unpack utr5'
+  let (lhs:pair:loop:seed:rhs:[]) =
+          case splitPlaces (lengthOfEach ali) $ B8.unpack utr5' of
+              match@(a:b:c:d:e:[]) -> match
+              _ -> splitPlacesBlanks (lengthOfEach ali) $ B8.unpack utr5'
+      myHead ls = if null ls
+                  then error "Structure.hs: rendUTR"
+                  else head ls
       rhsD = case s of
-               M8 -> (charC red $ head rhs) # alignB
-               M7A1 -> (charC red $ head rhs) # alignB
+               M8 ->
+                   if null rhs
+                   then mempty
+                   else (charC red $ myHead rhs) # alignB
+               M7A1 ->
+                   if null rhs
+                   then mempty
+                   else (charC red $ myHead rhs) # alignB
                _    -> string rhs # alignB
       str1 = alignB $ string (printf "%6d  " (up+1)) # alignR ===
              string "5'-" # alignR
