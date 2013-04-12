@@ -316,8 +316,8 @@ instance Ord RefLine where
         compare (rmirandaScore rf1) (rmirandaScore rf2) <>
         compare (rconserveScore rf1) (rconserveScore rf2) <>
         flip compare (totalSite rf1) (totalSite rf2)
-    {-# INLINE compare #-}
-    
+
+
 myCompare :: Ord a => Maybe a -> Maybe a -> Ordering
 myCompare Nothing Nothing = EQ
 myCompare (Just a1) (Just a2) = compare a1 a2

@@ -35,3 +35,4 @@ main = do
    str <- L8.readFile geneUTR 
    L8.readFile outUTR >>= L.writeFile utrFile . GZip.compress . L8.append str . L8.unlines . tail . L8.lines . L8.filter (/= '\r')
    dumpDB spe utrFile miRBase dbFile
+   

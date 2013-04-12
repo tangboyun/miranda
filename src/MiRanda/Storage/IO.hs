@@ -17,6 +17,7 @@ module MiRanda.Storage.IO where
 import           Bio.Seq.EMBL
 import qualified Codec.Compression.GZip as GZ
 import           Control.Arrow
+import           Control.Applicative
 import           Control.Monad
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as B
@@ -26,6 +27,7 @@ import qualified Data.ByteString.Lazy.Char8 as L8
 import           Data.Char
 import           Data.Function
 import qualified Data.HashMap.Strict as H
+import           Data.HashMap.Strict (HashMap(..))
 import           Data.List
 import           MiRanda.Binary
 import           MiRanda.BranchLen
@@ -47,22 +49,21 @@ import           Data.Binary
 import           Control.Parallel.Strategies
 import qualified Data.Binary.Get as G
 import Data.IORef
+import Data.HashSet (HashSet(..))
+import qualified Data.HashSet as S
+
 
 runMiRanda :: FilePath -> FilePath -> IO [MRecord]
 runMiRanda miFasta utrFasta = do
     proP <- mkProcess miFasta utrFasta
     (_,Just outH,_,pH) <- createProcess proP
     return . MI.mRecordFilter . toMRecords . preprocess =<< L8.hGetContents outH
-    -- ex <- waitForProcess pH
-    -- case ex of
-    --     ExitSuccess -> return mRs
-    --     _ -> exitWith ex
 
 filterEMBL :: ByteString -> [EMBL] -> [EMBL]
 filterEMBL spe = filter ((== spe) . taxonomy . identification)
 
-dumpDB :: String -> FilePath -> FilePath -> FilePath -> IO ()
-dumpDB spe utrFile miRBase outDB = do
+dumpDB :: String -> FilePath -> FilePath -> FilePath -> FilePath -> IO ()
+dumpDB spe utrFile miRBase miRFam outDB = do
     let spe3 = case map toLower spe of
             "human" -> "HSA"
             "mouse" -> "MMU"
@@ -75,10 +76,14 @@ dumpDB spe utrFile miRBase outDB = do
     hClose h1
     (utrFasta,h2) <- openTempFile tmpDir "UTR.fa"
     hClose h2
+
+    miHash <- L.readFile miRFam >>=
+              return . parseRfam spe3 . GZ.decompress
+    
     L.readFile miRBase >>=
     -- 不同前体可能产生相同miRNA成熟体
         L8.writeFile miFasta . toFastas . nubBy ((==) `on` accession) .
-        emblsToMiRNAs . filterEMBL spe3 . extractEMBL . GZ.decompress
+        emblsToMiRNAs miHash . filterEMBL spe3 . extractEMBL . GZ.decompress
 
     L.readFile utrFile >>=
         L8.writeFile utrFasta . MI.toFastas .
@@ -94,7 +99,7 @@ dumpDB spe utrFile miRBase outDB = do
     miRHash <- L.readFile miRBase >>=
                return . H.fromList .
                map (identity &&& id) .
-               emblsToMiRNAs . filterEMBL spe3 . extractEMBL . GZ.decompress
+               emblsToMiRNAs miHash . filterEMBL spe3 . extractEMBL . GZ.decompress
     L.writeFile outDB $
         GZ.compressWith GZ.defaultCompressParams {GZ.compressLevel = GZ.bestCompression} $
         L.concat $ map encode $
@@ -119,7 +124,80 @@ dumpDB spe utrFile miRBase outDB = do
         ) $ toPairs utrss $
         groupBy ((==) `on` _mRNA) mRs
 
+
+
+dumpDBWithHashPair :: String -> FilePath -> FilePath -> FilePath -> (HashSet ByteString,HashSet ByteString) -> FilePath -> IO ()
+dumpDBWithHashPair spe utrFile miRBase miRFam (miHash,mRHash) outDB = do
+    let spe3 = case map toLower spe of
+            "human" -> "HSA"
+            "mouse" -> "MMU"
+            "rat"   -> "RNO"
+            _ -> error "spe not supported"
+        filterMiRNA = if S.null miHash
+                      then id
+                      else filter ((`S.member` miHash) . identity)
+        filterUTR = if S.null mRHash
+                    then id
+                    else filter ((`S.member` mRHash) . refSeqID)
+
+                         
+    tmpDir <- getTemporaryDirectory
     
+    (miFasta,h1) <- openTempFile tmpDir "miRNA.fa"
+    hClose h1
+    (utrFasta,h2) <- openTempFile tmpDir "UTR.fa"
+    hClose h2
+
+    miHash <- L.readFile miRFam >>=
+              return . parseRfam spe3 . GZ.decompress
+    
+    L.readFile miRBase >>=
+    -- 不同前体可能产生相同miRNA成熟体
+        L8.writeFile miFasta . toFastas . filterMiRNA . nubBy ((==) `on` accession) .
+        emblsToMiRNAs miHash . filterEMBL spe3 . extractEMBL . GZ.decompress
+
+    L.readFile utrFile >>=
+        L8.writeFile utrFasta . MI.toFastas . filterUTR . 
+        filter ((== orgToTaxID spe) . taxonomyID) . toUTRs . GZ.decompress
+
+    mRs <- runMiRanda miFasta utrFasta
+
+
+    utrss <- L.readFile utrFile >>=
+             return .
+             groupBy ((==) `on` refSeqID) . toUTRs . GZ.decompress
+    -- should add family info here
+    miRHash <- L.readFile miRBase >>=
+               return . H.fromList .
+               map (identity &&& id) .
+               emblsToMiRNAs miHash . filterEMBL spe3 . extractEMBL . GZ.decompress
+    L.writeFile outDB $
+        GZ.compressWith GZ.defaultCompressParams {GZ.compressLevel = GZ.bestCompression} $
+        L.concat $ map encode $
+        map
+        (\(utrs,mRs) ->
+          let (lhs,rhs) = partition ((== orgToTaxID spe) . taxonomyID) utrs
+              u = head lhs
+              binIdx = snd $ getBranchLength (u,rhs)
+              exp = if "NM_" `B8.isPrefixOf` (refSeqID u)
+                    then Coding
+                    else NonCoding
+              gInfo = GI (Gene (geneSymbol u) (refSeqID u)) exp u rhs
+              gr = GR gInfo $
+                   map
+                   (\mr ->
+                     let mRNAL = mRNALen mr
+                         mir = _miRNA mr
+                         ss = MI.toSites mRNAL u $ MT.sites mr
+                         cs = getConservation binIdx u rhs ss
+                     in MiRSites (miRHash H.! mir) $ map toSite $ zip ss cs) mRs
+          in gr
+        ) $ toPairs utrss $
+        groupBy ((==) `on` _mRNA) mRs
+
+
+
+
 toPairs _ [] = []
 toPairs [] _ = []
 toPairs (utrs:rss) mRss@(mRs:mss) =
@@ -143,9 +221,7 @@ preprocess = L8.unlines . filter
              (\l ->
                L8.isPrefixOf "   " l ||
                L8.isPrefixOf ">" l
-               ) .
-             dropWhile
-             (/= "Current Settings:") .
+             ) . dropWhile (/= "Current Settings:") .
              L8.lines . L8.filter (/= '\r')
 
 byteStringToGRs :: L.ByteString -> [GeneRecord]
@@ -171,3 +247,35 @@ byteStringToGRs b =
                   go (f (Just b)) bs
               G.Fail _ _ _ -> error "parse failed"
               
+parseRfam :: ByteString -> L8.ByteString -> HashMap ByteString (ByteString,ByteString)
+parseRfam spe str =
+    let ss = splitRecord $ L8.filter (/= '\r') str
+        spe3 = B8.map toLower spe
+    in H.fromList $
+       concatMap
+       ((liftA2 zip
+         (map (!! 1) . filter (B8.isPrefixOf spe3 . (!! 2)) . map B8.words . init . drop 2)
+         (repeat . (((!! 1) . B8.words . head) &&& ((!! 1) . B8.words . head . tail)))
+        ) . filter (not . B8.null) . B8.lines) ss
+        
+splitRecord :: L8.ByteString -> [ByteString]
+splitRecord str =
+    if L8.null str
+    then []
+    else go $ L8.findIndices (== '/') str
+  where
+    go [] = []
+    go (_:[]) = []
+    go (i:j:is) =
+      if j - i == 1
+      then if i > 1 && L8.index str (i-1) == '\n'
+           then let (lhs,rhs) = L8.splitAt (j+1) str
+                    remain =
+                        case L8.dropWhile (/= '\n') rhs of
+                            "" -> ""
+                            re -> L8.tail re
+                in L8.toStrict lhs :
+                   splitRecord remain
+           else go is
+      else go (j:is)
+{-# INLINE splitRecord #-}

@@ -14,34 +14,46 @@
 
 module MiRanda.Storage.Util where
 
-import Bio.Seq.EMBL
-import Data.Maybe
-import qualified Data.Map.Strict as M
+import           Bio.Seq.EMBL
 import qualified Data.ByteString.Char8 as B8
-import qualified Data.ByteString.Lazy.Char8 as L8
-import MiRanda.Storage.Type hiding (seqdata)
-import qualified MiRanda.Storage.Type as ST
+import Data.ByteString (ByteString)
 import           Data.ByteString.Lazy.Builder
 import           Data.ByteString.Lazy.Builder.ASCII
-import MiRanda.Util (renderFastas)
+import qualified Data.ByteString.Lazy.Char8 as L8
+import           Data.List
+import qualified Data.Map.Strict as M
+import           Data.Maybe
+import qualified MiRanda.Storage.Type as ST
+import           MiRanda.Storage.Type hiding (seqdata)
 import qualified MiRanda.Types as MT
-import Data.List
+import           MiRanda.Util (renderFastas)
+import qualified Data.HashMap.Strict as H
+import Data.HashMap.Strict (HashMap)
 
-emblsToMiRNAs :: [EMBL] -> [MiRNA]
-emblsToMiRNAs es =
+emblsToMiRNAs :: HashMap ByteString (ByteString,ByteString) -> [EMBL] -> [MiRNA]
+emblsToMiRNAs miHash es =
     concatMap
     (\e ->
       let s = case seqdata e of
               CS _ -> error "error emblsToMiRNAs: not SQ"
               SQ _ b -> b
+          acc = head . accessions $ e
           fs = filter ((== "miRNA") . key) $ fromMaybe [] $ features e
           rf = case dbCrossRef e of
-              Nothing -> Nothing
+              Nothing ->
+                  if H.member acc miHash
+                  then Just $ uncurry (Family "") $ miHash H.! acc
+                  else Nothing
               Just rs ->
                   case find ((== "RFAM") . externalDB) rs of
-                      Nothing -> Nothing
+                      Nothing ->
+                          if H.member acc miHash
+                          then Just $ uncurry (Family "") $ miHash H.! acc
+                          else Nothing
                       Just (DBCrossRef _ rID fName) ->
-                          return $ Rfam rID $ fromMaybe "" fName
+                          if H.member acc miHash
+                          then return $ uncurry (Family rID) $ miHash H.! acc
+                          else return $ Family rID "" $ fromMaybe "" fName
       in map (extractFromFeature rf s) fs
       ) es
     where

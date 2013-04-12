@@ -172,11 +172,12 @@ instance Binary MiRNA where
         put e
     get = MiRNA <$> get <*> get <*> get <*> get <*> get
 
-instance Binary Rfam where
-    put (Rfam a b) = do
+instance Binary Family where
+    put (Family a b c) = do
         put a
         put b
-    get = Rfam <$> get <*> get
+        put c
+    get = Family <$> get <*> get <*> get
     
 instance Binary MiRSites where
     put (MiRSites a b) = do
