@@ -16,10 +16,34 @@ module MiRanda.Sheet.Template
        (
          toGeneSheetComment
        , toSiteSheetComment
+       , toCeRNASheetComment
        ) 
        where
 
 import Text.StringTemplate
+import qualified Data.ByteString.Lazy.Char8 as L8
+
+toCeRNASheetComment :: (Stringable a,ToSElem a) => a -> a -> Int -> Int -> a
+{-# INLINE toCeRNASheetComment #-}
+toCeRNASheetComment miRVersion geneRef miRBeg miREnd =
+    render $
+    setManyAttrib
+    [("miRBaseVersion",miRVersion)
+    ,("geneRefSeqID",geneRef)
+    ,("miRBeg",toStr miRBeg)
+    ,("miREnd",toStr miREnd)
+    ] ceRNASheetTemplate
+   where 
+     toStr :: Stringable a => Int -> a
+     toStr i =
+         let ls = ['A'..'Z']
+             (x,y) = i `divMod` 26
+         in if x > 0
+            then stFromByteString $
+                 L8.cons' (ls !! (x-1)) $! L8.singleton $! ls !! y
+            else stFromByteString $
+                 L8.singleton $! ls !! i
+          
 
 toGeneSheetComment :: (Stringable a,ToSElem a) => a -> a -> a
 {-# INLINE toGeneSheetComment #-}
@@ -39,6 +63,25 @@ toSiteSheetComment miRVersion geneRef =
     ,("geneRefSeqID",geneRef)]
     siteSheetTemplate
 
+
+ceRNASheetTemplate :: Stringable a => StringTemplate a
+ceRNASheetTemplate =
+    newSTMP
+    "Predicted ceRNAs for $geneRefSeqID$\n\
+    \\n\n\
+    \# Column A: Seqname, the name of ceRNA.\n\
+    \# Column B: GeneSymbol, the official gene symbol of the ceRNA.\n\
+    \# Column C: Type, the type of the ceRNA transcipt.\n\
+    \# Column D: MuTaMe Score, the mutually targeted MRE enrichment score. See Ref [1] for details.\n\
+    \# Column E: Total miRs, the number of miRs shared by the ceRNA and $geneRefSeqID$.\n\
+    \# Column F: Total Sites, the number of MREs shared by the ceRNA and $geneRefSeqID$.\n\
+    \# Column $miRBeg$ ~ $miREnd$: The number of MREs for each miRNA (miRBase v$miRBaseVersion$).\n\ 
+    \\n\n\
+    \# Reference:\n\
+    \[1] Yvonne Tay, et al. Coding-Independent Regulation of the Tumor Suppressor PTEN by Competing Endogenous mRNAs. \
+    \Cell, Volume 147, Issue 2, 344-357, 14 October 2011.\n\n"
+
+    
 geneSheetTemplate :: Stringable a => StringTemplate a
 geneSheetTemplate =
     newSTMP

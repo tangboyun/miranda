@@ -61,3 +61,7 @@ commentCell = defaultS
   , wrapText = Just True
   , fontSize = Just 10
   }
+  
+ceRNACell = title { bgColor = Just crimson }
+mutameCell = title { bgColor = Just forestgreen }
+miRCell = title { bgColor = Just aquamarine }

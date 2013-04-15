@@ -23,10 +23,12 @@ library
                        MiRanda.Storage.Util
                        MiRanda.Binary
                        MiRanda.Storage.IO
+                       MiRanda.CeRNA
   other-modules:       
                        MiRanda.Sheet.SiteSheet
                        MiRanda.Sheet.TargetSheet
                        MiRanda.Sheet.GeneSheet
+                       MiRanda.Sheet.CeRNASheet
                        MiRanda.Sheet.Template
                        MiRanda.Sheet.Styles
                        MiRanda.Parser

@@ -49,7 +49,8 @@ miRFam = "/home/tangboyun/miRNADB/miFam.dat.gz"
 dbFile = "/tmp/H1110143A.data"
 fOrignFile = "/home/tangboyun/miRNADB/microarray_033010_human_lncRNA_V2_transcript.fa"
 aOrignFile = "/home/tangboyun/miRNADB/microarray_033010_human_lncRNA_V2_annotation_20120105.txt"
-ids = ["AK127534","NR_028076","uc001abs.2"]
+ids = [--"AK127534",
+       "NR_028076","uc001abs.2"]
 spe = "Human"
 fastaFile = "/tmp/test.fa"
 annoFile = "/tmp/testAnno.txt"
@@ -122,7 +123,7 @@ main = do
             (filter (not . null . sites) .
              map (liftA2 MiRSites mir
                   (filter
-                   (liftA2 (&&) -- 每个位点必须 context+ < -0.05 && context < -0.05
+                   (liftA2 (&&) -- 每个位点必须 context+ < -0.10 && context < -0.10
                     ((< (-0.10)) . fromMaybe 0 . fmap contextPlus . contextScorePlus) 
                     ((< (-0.10)) . fromMaybe 0 . fmap context . contextScore)
                    ) .
