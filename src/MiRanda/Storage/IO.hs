@@ -225,27 +225,13 @@ preprocess = L8.unlines . filter
              L8.lines . L8.filter (/= '\r')
 
 byteStringToGRs :: L.ByteString -> [GeneRecord]
-byteStringToGRs b = 
-    let bs = L.toChunks b
-    in if null bs
-       then []
-       else go (G.runGetIncremental get `G.pushChunk` (head bs)) (tail bs)
-    where
-      go r [] =
-          case r of
-              G.Done unused _ gr ->
-                  if B.null unused
-                  then [gr]
-                  else gr : go (G.runGetIncremental get `G.pushChunk` (B.append unused B.empty)) []
-              G.Partial f -> go (f Nothing) []
-              G.Fail _ _ _ -> error "parse failed in last record"
-      go r (b:bs) =
-          case r of
-              G.Done unused _ gr ->
-                  gr: go (G.runGetIncremental get `G.pushChunk` (B.append unused b)) bs
-              G.Partial f ->
-                  go (f (Just b)) bs
-              G.Fail _ _ _ -> error "parse failed"
+byteStringToGRs b =
+    case G.runGetOrFail get b of
+        Right (b',_,r) -> r : byteStringToGRs b'
+        Left (b',_,s) ->
+            if L.null b'
+            then []
+            else error s
               
 parseRfam :: ByteString -> L8.ByteString -> HashMap ByteString (ByteString,ByteString)
 parseRfam spe str =
