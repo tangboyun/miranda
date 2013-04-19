@@ -1,0 +1,119 @@
+#+TITLE: CeRNA
+#+AUTHOR: Boyun Tang
+#+EMAIL:
+#+DATE:  %B %e, %Y
+#+LaTex_CLASS: 
+#+LaTeX_CLASS_OPTIONS:
+#+LATEX_HEADER:
+#+LaTeX_HEADER: 
+#+KEYWORDS: 
+#+DESCRIPTION: 
+#+STARTUP: content
+#+STARTUP: inlineimages
+#+OPTIONS: H:3 num:t toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+OPTIONS: TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
+# {{{ 非常用选项设定
+#+BEAMER_FRAME_LEVEL:
+#+BEAMER_HEADER_EXTRA:
+#+MACRO: BEAMERMODE presentation
+#+MACRO: BEAMERTHEME Antibes
+#+MACRO: BEAMERCOLORTHEME lily
+#+MACRO: BEAMERSUBJECT RMRF
+#+MACRO: BEAMERINSTITUTE East China Normal University, Key Laboratory of Brain Functional Genomics, Ministry of Education.
+#+EXPORT_EXCLUDE_TAGS: noexport
+# }}} 非常用选项 定义结束
+
+
+
+
+
+
+\bibliography{CeRNA}
+# {{{ 快速参考指南
+# H:         set the number of headline levels for export
+# num:       turn on/off section-numbers
+# toc:       turn on/off table of contents, or set level limit (integer)
+# \n:        turn on/off line-break-preservation (DOES NOT WORK)
+# @:         turn on/off quoted HTML tags
+# ::         turn on/off fixed-width sections
+# |:         turn on/off tables
+# ^:         turn on/off TeX-like syntax for sub- and superscripts.  If
+#            you write "^:{}", a_{b} will be interpreted, but
+#            the simple a_b will be left as it is.
+# -:         turn on/off conversion of special strings.
+# f:         turn on/off footnotes like this[1].
+# todo:      turn on/off inclusion of TODO keywords into exported text
+# tasks:     turn on/off inclusion of tasks (TODO items), can be nil to remove
+#            all tasks, todo to remove DONE tasks, or list of kwds to keep
+# pri:       turn on/off priority cookies
+# tags:      turn on/off inclusion of tags, may also be not-in-toc
+# <:         turn on/off inclusion of any time/date stamps like DEADLINES
+# *:         turn on/off emphasized text (bold, italic, underlined)
+# TeX:       turn on/off simple TeX macros in plain text
+# LaTeX:     configure export of LaTeX fragments.  Default auto
+# skip:      turn on/off skipping the text before the first heading
+# author:    turn on/off inclusion of author name/email into exported file
+# email:     turn on/off inclusion of author email into exported file
+# creator:   turn on/off inclusion of creator info into exported file
+# timestamp: turn on/off inclusion creation time into exported file
+# d:         turn on/off inclusion of drawers
+
+#     #+CAPTION: A long table
+#     #+LABEL: tbl:long
+#     #+ATTR_LaTeX: longtable align=l|lp{3cm}r|l
+#     | ..... | ..... |
+#     | ..... | ..... |
+
+#     #+CAPTION: A wide table with tabulary
+#     #+LABEL: tbl:wide
+#     #+ATTR_LaTeX: table* tabulary width=\textwidth
+#     | ..... | ..... |
+#     | ..... | ..... |
+
+#     #+CAPTION:    The black-body emission of the disk around HR 4049
+#     #+LABEL:      fig:SED-HR4049
+#     #+ATTR_LaTeX: width=5cm,angle=90
+#     [[./img/sed-hr4049.pdf]]
+     
+#     #+ATTR_LaTeX: width=0.38\textwidth wrap placement={r}{0.4\textwidth}
+#     [[./img/hst.png]]
+
+#     #+ATTR_HTML: title="The Org-mode homepage" style="color:red;"
+#     [[http://orgmode.org]]
+
+#     #+CAPTION: This is a table with lines around and between cells
+#     #+ATTR_HTML: border="2" rules="all" frame="all"
+
+#     #+CAPTION: A black cat stalking a spider
+#     #+ATTR_HTML: alt="cat/spider image" title="Action!" align="right"
+#     [[./img/a.jpg]]
+
+
+#     --CSS OPTIONS--
+#     p.author            author information, including email
+#     p.date              publishing date
+#     p.creator           creator info, about org-mode version
+#     .title              document title
+#     .todo               TODO keywords, all not-done states
+#     .done               the DONE keywords, all states that count as done
+#     .WAITING            each TODO keyword also uses a class named after itself
+#     .timestamp          timestamp
+#     .timestamp-kwd      keyword associated with a timestamp, like SCHEDULED
+#     .timestamp-wrapper  span around keyword plus timestamp
+#     .tag                tag in a headline
+#     ._HOME              each tag uses itself as a class, "@" replaced by "_"
+#     .target             target for links
+#     .linenr             the line number in a code example
+#     .code-highlighted   for highlighting referenced code lines
+#     div.outline-N       div for outline level N (headline plus text))
+#     div.outline-text-N  extra div for text at outline level N
+#     .section-number-N   section number in headlines, different for each level
+#     div.figure          how to format an inlined image
+#     pre.src             formatted source code
+#     pre.example         normal example
+#     p.verse             verse paragraph
+#     div.footnotes       footnote section headline
+#     p.footnote          footnote definition paragraph, containing a footnote
+#     .footref            a footnote reference number (always a <sup>)
+#     .footnum            footnote number in footnote definition (always <sup>)
+# }}}

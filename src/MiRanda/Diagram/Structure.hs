@@ -124,7 +124,7 @@ renderSeed5' seed s =
   in seedD # centerX
 
 renderMiRNA ali@(Align miR3' utr5' b) =
-  let (lhs:pair:loop:seed:rhs:[]) = splitPlaces (lengthOfEach ali) $
+  let (lhs:pair:loop:seed:rhs:[]) = splitPlacesBlanks (lengthOfEach ali) $
                                     B8.unpack miR3'
   in string "     3'-" ||| ((string lhs ||| renderPair3' pair seedPairColor ||| string loop) # centerX ===
       (stringC seedPairColor "3'pairing" # centerXY)) |||
@@ -162,7 +162,7 @@ renderUTR s ali@(Align miR3' utr5' b) (P up dn) =
   in centerXY $ str1 ||| whole ||| str2     
 
 renderBond ali@(Align miR3' utr5' b) =
-  let (lhs:pair:loop:seed:rhs:[]) = splitPlaces (lengthOfEach ali) $
+  let (lhs:pair:loop:seed:rhs:[]) = splitPlacesBlanks (lengthOfEach ali) $
                                     B8.unpack b
       renderB = hcat . map (\c ->
                                  if c /= ' '

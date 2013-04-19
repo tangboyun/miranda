@@ -82,12 +82,14 @@ ceRNAScore (GR _ mirSs1) (GR (GI _ _ uStr _) mirSs2) =
     in mutameScore l total ss
 
 intersection :: [MiRSites] -> [MiRSites] -> [(ByteString,[(Int,Int)])]
-intersection = (H.toList .) .
-               (H.intersection `on`
-                (H.fromList . map
-                 ((identity . mir) &&&
-                  (map ((beg &&& end) . siteRange) . sites)
-                 )))
+{-# INLINE intersection #-}
+intersection ss1 ss2 =
+    ((H.toList .) .
+     (H.intersection `on`
+      (H.fromList . map
+       ((identity . mir) &&&
+        (map ((beg &&& end) . siteRange) . sites)
+       )))) ss1 ss2
 
 sharePercentageGE :: Double -> GeneRecord -> GeneRecord -> Bool
 {-# INLINE sharePercentageGE #-}
@@ -99,6 +101,7 @@ sharePercentageGE p gr1 gr2 =
 
 toLine :: GeneRecord -> GeneRecord
        -> (Double,(UV.Vector Int,UV.Vector Double))
+{-# INLINE toLine #-}
 toLine gr1 gr2 =
     let h1 = (H.intersection `on`
               (H.fromList . map
@@ -112,13 +115,15 @@ toLine gr1 gr2 =
                 (foldl1' (+) . map (fromMaybe 0 . fmap contextPlus) . map contextScorePlus . sites)
                ) . mirSites)) gr2 gr1             
         vi = UV.fromList $
-             map
-             (fromMaybe 0 . fmap length .
-              (`H.lookup` h1) . identity . mir) $
-             mirSites gr1
+              map
+              (fromMaybe 0 . fmap length .
+               (`H.lookup` h1) . identity . mir) $
+              mirSites gr1
         vd = UV.fromList $
-             map
-             (fromMaybe 0 .
-              (`H.lookup` h2) . identity . mir) $
-             mirSites gr1
-    in (ceRNAScore gr1 gr2,(vi,vd))
+              map
+              (fromMaybe 0 .
+               (`H.lookup` h2) . identity . mir) $
+              mirSites gr1
+        m = ceRNAScore gr1 gr2
+    in (m,(vi,vd))
+       

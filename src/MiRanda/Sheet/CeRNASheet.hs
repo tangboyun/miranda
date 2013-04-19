@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : 
@@ -67,7 +68,7 @@ mkCeRNAWorkbook gr grs =
                       (map
                        (\((Gene s r, expr),(mu,vi)) ->
                          mkRow $
-                         [ string . B8.unpack $ r
+                         [ smartHRef r
                          , string . B8.unpack $ s
                          , string . show $ expr
                          , number mu
@@ -86,13 +87,22 @@ mkCeRNAWorkbook gr grs =
        [ceRNATable
        ]
   where
-    addS wb = wb
-              # addStyle (Name "ceRNA") ceRNACell
-              # addStyle (Name "mutame") mutameCell
-              # addStyle (Name "miR") miRCell
-              # addStyle (Name "head") headCell
-              # addStyle (Name "bold") boldCell
-
+     smartHRef str = if "NM_" `B8.isPrefixOf` str ||
+                        "NR_" `B8.isPrefixOf` str
+                    then toNCBILink str
+                    else string . B8.unpack $ str
+     toNCBILink l = let s = B8.unpack l
+                    in href ("http://www.ncbi.nlm.nih.gov/nuccore/" ++ s ++ "?report=genbank") s
+                       # withStyleID "ref"
+     addS wb = wb
+               # addStyle (Name "ceRNA") ceRNACell
+               # addStyle (Name "mutame") mutameCell
+               # addStyle (Name "miR") miRCell
+               # addStyle (Name "head") headCell
+               # addStyle (Name "bold") boldCell
+               # addStyle (Name "comment") commentCell
+               # addStyle (Name "ref") refCell
+               
 headLine gr =
     mkRow
     [string ("CeRNAs for " ++ (B8.unpack . ref . gene . geneInfo $ gr))

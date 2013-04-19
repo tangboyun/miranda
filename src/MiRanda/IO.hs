@@ -149,7 +149,7 @@ mkdir = createDirectoryIfMissing True
 
 toDiagramsLnc :: FilePath -> [Record] -> IO ()
 toDiagramsLnc outP rs =
-    mapM_ (\(outF,d) -> rend outF d) $
+    mapM_ (\(outF,d) -> renderPDF outF d) $
     withStrategy (parBuffer numCapabilities rseq) $
     map 
     (\r ->
@@ -165,7 +165,7 @@ toDiagramsLnc outP rs =
 
 toDiagrams :: FilePath -> [Record] -> IO ()
 toDiagrams outP rs =
-    mapM_ (\(outF,d) -> rend outF d) $
+    mapM_ (\(outF,d) -> renderPDF outF d) $
     withStrategy (parBuffer numCapabilities rseq) $
     map 
     (\r ->

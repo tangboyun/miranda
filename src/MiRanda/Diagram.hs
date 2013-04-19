@@ -12,7 +12,16 @@
 --
 -----------------------------------------------------------------------------
 
-module MiRanda.Diagram where
+module MiRanda.Diagram
+       ( renderPDF
+       , renderPNG
+       , recordDiagram
+       , tableDiagram
+       , recordDiagram'
+       , tableDiagram'
+       , module MiRanda.Diagram.HeatMap
+       ) 
+       where
 
 import qualified Data.ByteString.Char8 as B8
 import           Data.Char (isAlpha)
@@ -27,6 +36,7 @@ import           MiRanda.Diagram.Icon
 import           MiRanda.Diagram.LocalAU
 import           MiRanda.Diagram.Pos
 import           MiRanda.Diagram.Structure
+import           MiRanda.Diagram.HeatMap
 import           MiRanda.Score
 import           MiRanda.Types
 import           MiRanda.Util
@@ -62,9 +72,13 @@ tableHeader =
 widthA4 = Width 600
 heightA4 = Height 840
     
-rend :: FilePath -> Diagram Cairo R2 -> IO ()
-rend outFile d =
-    fst $ renderDia Cairo (CairoOptions outFile widthA4 PDF False) d
+renderPDF :: FilePath -> Diagram Cairo R2 -> IO ()
+renderPDF outFile d =
+    fst $ renderDia Cairo (CairoOptions outFile (sizeSpec2D d) PDF False) d
+
+renderPNG :: FilePath -> Diagram Cairo R2 -> IO ()
+renderPNG outFile d =
+    fst $ renderDia Cairo (CairoOptions outFile (sizeSpec2D d) PNG False) d
 
 
 recordDiagram :: Record -> Diagram Cairo R2
