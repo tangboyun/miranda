@@ -33,46 +33,46 @@ data Expression = Coding
                   deriving (Eq,Show)
                            
 data GeneRecord = GR
-  { geneInfo :: !GeneInfo
-  , mirSites :: ![MiRSites]
+  { geneInfo :: GeneInfo
+  , mirSites :: [MiRSites]
   } deriving (Show,Eq)
 
 data GeneInfo = GI
-  { gene :: !Gene
-  , expressionStyle :: !Expression
-  , thisSpecies :: !UTR
-  , otherSpecies :: ![UTR]
+  { gene :: Gene
+  , expressionStyle :: Expression
+  , thisSpecies :: UTR
+  , otherSpecies :: [UTR]
   } deriving (Show,Eq)
 
 data MiRSites = MiRSites
-  { mir :: !MiRNA
-  , sites :: ![Site]
+  { mir :: MiRNA
+  , sites :: [Site]
   } deriving (Show,Eq)
              
 data Site = Site
-  { miRandaScore :: !MScore
-  , conserveScore :: !Conservation
-  , rawScore :: !RawScore
-  , contextScore :: !(Maybe ContextScore)
-  , contextScorePlus :: !(Maybe ContextScorePlus)
-  , seedRange :: !Pair
-  , siteRange :: !Pair
-  , seed :: !SeedType
-  , alignStructure :: !Align
+  { miRandaScore :: MScore
+  , conserveScore :: Conservation
+  , rawScore :: RawScore
+  , contextScore :: Maybe ContextScore
+  , contextScorePlus :: Maybe ContextScorePlus
+  , seedRange :: Pair
+  , siteRange :: Pair
+  , seed :: SeedType
+  , alignStructure :: Align
   } deriving (Show,Eq)
 
 data MiRNA = MiRNA
-  { identity :: !ByteString -- "product" in miRBase feature
-  , accession :: !ByteString -- miRBase accession id
-  , isExperimentalValidated :: !Bool
-  , family :: !(Maybe Family)
-  , seqdata :: !ByteString
+  { identity :: ByteString -- "product" in miRBase feature
+  , accession :: ByteString -- miRBase accession id
+  , isExperimentalValidated :: Bool
+  , family :: Maybe Family
+  , seqdata :: ByteString
   } deriving (Show,Eq)
 
 data Family = Family
-  { rFamID :: !ByteString
-  , miRBaseID :: !ByteString
-  , miRNAFamily :: !ByteString
+  { rFamID :: ByteString
+  , miRBaseID :: ByteString
+  , miRNAFamily :: ByteString
   } deriving (Show,Eq)
 
 instance NFData GeneRecord where

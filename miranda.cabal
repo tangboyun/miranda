@@ -1,5 +1,5 @@
 name:                miranda
-version:             0.1.0.0
+version:             0.1.0.1
 -- synopsis:            
 -- description:         
 license:             GPL-3
@@ -10,7 +10,8 @@ maintainer:          tangboyun@hotmail.com
 category:            Bioinformatics
 build-type:          Simple
 cabal-version:       >=1.8
-
+Data-Files:          doc/CeRNA.org
+                     patch/miRanda-3.3a-tby.patch
 library
   exposed-modules:   
                        MiRanda.Types

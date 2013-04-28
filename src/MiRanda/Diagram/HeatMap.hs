@@ -13,8 +13,9 @@
 -----------------------------------------------------------------------------
 
 module MiRanda.Diagram.HeatMap
-       ( plotCeRNAHeatmap
---       , mkDataset
+       (
+       --   plotCeRNAHeatmap
+       -- , mkDataset
        ) 
            where
 
@@ -49,7 +50,8 @@ import qualified Data.Set as S
 
 plotCeRNAHeatmap :: (Renderable (Path R2) b, Renderable Text b, Renderable Image b, Backend b R2)
                  => GeneRecord -> [GeneRecord] -> (Diagram b R2,Diagram b R2)
-plotCeRNAHeatmap gr grs =
+{-# INLINE plotCeRNAHeatmap #-}                    
+plotCeRNAHeatmap !gr grs =
     let colorOpt1 = Two white blue
         colorOpt2 = Two blue white
         clustOpt1 = ClustOpt colorOpt1
@@ -64,7 +66,7 @@ plotCeRNAHeatmap gr grs =
         lineW = (min mH mW) * 5.0e-5
         fontS = 10
         fontN = "Arial"
-        dp@(dset1,dset2) = mkDataset gr grs
+        dp@(!dset1,!dset2) = mkDataset gr grs
         toColorV = (\(i,a) ->
                      ColorVal i ((i+a)*0.5) a
                    ) . minMax . dat . datM
@@ -81,6 +83,7 @@ plotCeRNAHeatmap gr grs =
                       , colorVal = colorV2 }
     in (fst . plotHeatMap para1) ***
        (fst . plotHeatMap para2) $ dp
+
 
 
 -- plotCeRNASite :: (Renderable (Path R2) b, Renderable Text b, Renderable Image b, Backend b R2)
@@ -136,7 +139,8 @@ plotCeRNAHeatmap gr grs =
 --         in getSiteNum accV' ss rs
             
 mkDataset :: GeneRecord -> [GeneRecord] -> (Dataset,Dataset)
-mkDataset gr grs =
+{-# INLINE mkDataset #-}
+mkDataset !gr grs =
     let colNs = V.fromList $ map (decodeUtf8 . B8.copy . identity . mir) $ mirSites gr
         getRowName r = (\g ->
                          let n1 = decodeUtf8 $ ref g
@@ -185,18 +189,18 @@ pcc v1 v2 =
      (\(num,(res1,res2)) i e1 ->
        let val1 = e1
            val2 = UV.unsafeIndex v2 i
-           num' = num + (val1-m1) * (val2-m2)
-           res1' = res1 + (val1-m1)^2
-           res2' = res2 + (val2-m2)^2
+           num' = num + (val1-m1)*(val2-m2)
+           res1' = res1 + (val1-m1)*(val1-m1)
+           res2' = res2 + (val2-m2)*(val2-m2)
        in (num',(res1',res2'))
      ) (0,(0,0)) v1
 {-# INLINE pcc #-}
-euclideanDistance v1 v2 = sqrt $ UV.sum $ UV.map (^2) $ UV.zipWith (-) v1 v2
+euclideanDistance v1 v2 = sqrt $ UV.sum $ UV.map (\x -> x*x) $ UV.zipWith (-) v1 v2
 {-# INLINE euclideanDistance #-}
 corr v1 v2 = 1 - pcc v1 v2
 {-# INLINE corr #-}
-
+{-# INLINE euclidAndCorr #-}
 euclidAndCorr v1 v2 =
     let d1 = euclideanDistance v1 v2
-        dm = 0.5 * (sqrt (UV.sum (UV.map (^2) v1)) + sqrt (UV.sum (UV.map (^2) v2)))
+        dm = 0.5 * (sqrt (UV.sum (UV.map (\x -> x*x) v1)) + sqrt (UV.sum (UV.map (\x -> x*x) v2)))
     in ((d1 / dm) + (0.5 * corr v1 v2)) / 2

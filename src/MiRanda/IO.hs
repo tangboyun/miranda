@@ -99,7 +99,7 @@ toOutPut spe allUTRFile outPath func mRs =
 
 splitList :: Int -> [a] -> [[a]]
 splitList n ls =
-    let ls' = zip [1..] ls
+    let ls' = zip [0..] ls
         ns = [0..n-1]
     in map
        (\i ->
