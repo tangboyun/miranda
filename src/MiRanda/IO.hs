@@ -53,7 +53,7 @@ import qualified Data.HashMap.Strict as H
 import qualified Data.Vector as V
 data Token = Token
 
-toOutPut :: String -> FilePath -> FilePath -> (FilePath -> [Record] -> IO ()) -> [MRecord] -> IO ()
+toOutPut :: String -> FilePath -> FilePath -> (FilePath -> Record -> IO ()) -> [MRecord] -> IO ()
 {-# INLINE toOutPut #-}
 toOutPut spe allUTRFile outPath func mRs =
     let dDir = "Diagrams"
@@ -61,42 +61,18 @@ toOutPut spe allUTRFile outPath func mRs =
         targetFile = outPath </> "Target Genes.xml"
         siteFile = outPath </> "Target Sites.xml"
         hRef = dDir
-        nThreadDraw = 1
-        -- cairo 1.12.10 并发写pdf导致吐核
-        -- 也许以后可以,这是一个主要性能瓶颈
-        -- testIO: cairo-hash.c:506:
-        -- _cairo_hash_table_lookup_exact_key: Assertion `!"reached"' failed.
-        n = nThreadDraw + 2
     in do
-        (rfs,sis) <- readUTRs allUTRFile (map _mRNA mRs) >>=
-              return .
-              (toRefLines &&& toSiteLines) .
-              (\ss -> zip ss (getConservations ss)) . recordFilter . toRecord spe mRs
         mkdir outP
+        readUTRs allUTRFile (map _mRNA mRs) >>=
+              (\rcs -> do
+                    mapM_ (func outP) $ map fst rcs
+                    (rfs,sis) <- return $ (toRefLines &&& toSiteLines) rcs
+                    writeFile targetFile $ showSpreadsheet $
+                        mkTargetWorkbook hRef rfs
+                    writeFile siteFile $ showSpreadsheet $
+                        mkSiteWorkbook hRef sis) .
+              (\ss -> zip ss (getConservations ss)) . recordFilter . toRecord spe mRs
         
-        allMVs@(mv1:mv2:mvs) <- sequence $ replicate n newEmptyMVar
-
-        _ <- forkOS $ do
-            writeFile targetFile $ showSpreadsheet $
-                mkTargetWorkbook hRef rfs
-            putMVar mv1 Token
-            
-        _ <- forkOS $ do
-            writeFile siteFile $ showSpreadsheet $
-                mkSiteWorkbook hRef sis
-            putMVar mv2 Token
-
-        rss <- readUTRs allUTRFile (map _mRNA mRs) >>= 
-               return . zip mvs .
-               splitList nThreadDraw . recordFilter . toRecord spe mRs
-               
-        forM_ rss $ \(mv,rs) -> 
-            forkOS $ do
-                func outP rs
-                putMVar mv Token
-
-        sequence_ $ map takeMVar allMVs
-
 splitList :: Int -> [a] -> [[a]]
 splitList n ls =
     let ls' = zip [0..] ls
