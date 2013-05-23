@@ -307,6 +307,7 @@ instance Additive Conservation where
         addPct (Just pct1) (Just pct2) = Just $ 1 - (1-pct1)*(1-pct2)
         addPct p1@(Just _) _ = p1
         addPct _ p2@(Just _) = p2
+        addPct _ _ = Nothing
     {-# INLINE add #-}
 
 instance Ord RefLine where
