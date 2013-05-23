@@ -37,7 +37,7 @@ import Control.Parallel.Strategies
 import GHC.Conc
 
 toRefLines :: [(Record,[Conservation])] -> [RefLine]
-toRefLines rs = withStrategy (parBuffer numCapabilities rseq) $ map mergeScore rs
+toRefLines rs = map mergeScore rs
 {-# INLINE toRefLines #-}    
 
 
