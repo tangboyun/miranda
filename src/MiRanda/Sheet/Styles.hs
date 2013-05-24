@@ -63,5 +63,6 @@ commentCell = defaultS
   }
   
 ceRNACell = title { bgColor = Just crimson }
+targetCell = title {bgColor = Just lightseagreen}
 mutameCell = title { bgColor = Just forestgreen }
 miRCell = title { bgColor = Just aquamarine }

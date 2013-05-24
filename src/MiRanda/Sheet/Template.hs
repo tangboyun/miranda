@@ -17,11 +17,24 @@ module MiRanda.Sheet.Template
          toGeneSheetComment
        , toSiteSheetComment
        , toCeRNASheetComment
+       , toTargetGeneComment
+       , toTargetSiteComment
        ) 
        where
 
 import Text.StringTemplate
 import qualified Data.ByteString.Lazy.Char8 as L8
+
+toTargetGeneComment :: (Stringable a,ToSElem a) => a -> a
+toTargetGeneComment mirIdentity =
+    render $
+    setManyAttrib [("miIdentity",mirIdentity)] targetGeneSheetTemplate
+
+toTargetSiteComment :: (Stringable a,ToSElem a) => a -> a
+toTargetSiteComment mirIdentity =
+    render $
+    setManyAttrib [("miIdentity",mirIdentity)] targetSiteSheetTemplate
+
 
 toCeRNASheetComment :: (Stringable a,ToSElem a) => a -> a -> Int -> Int -> a
 {-# INLINE toCeRNASheetComment #-}
@@ -143,6 +156,81 @@ siteSheetTemplate =
     \# Column R ~ T: The detialed components for the 3'-Pairing, Local AU and Position scores defined in Ref [1].\n\
     \# Column U,V: The thermodynamic properties of the binding site given by miRanda (Ref [5]).\n\
     \# Column W ~ Y: The conservation score used in TargetScan. See Ref [3] for details.\n\
+    \\n\n\
+    \# Note:\n\
+    \Currently, there is not enough data for constructing phylogenetic tree of different species for LncRNAs. The \"Conservation\" \
+    \section is meaningless for LncRNA. All sites on LncRNA are treated as non-conserved ones.\n\
+    \\n\n\
+    \# Reference:\n\
+    \[1] Grimson A., et al. MicroRNA Targeting Specificity in Mammals: Determinants beyond Seed Pairing. \
+    \Molecular Cell, Volume 27, Issue 1, 91-105, 6 July 2007.\n\
+    \[2] Amy E. Pasquinelli. MicroRNAs and their targets: recognition, regulation and an emerging reciprocal relationship. \
+    \Nature Reviews Genetics, Volume 13, 271-282, 1 April 2012.\n\
+    \[3] Robin C Friedman, et al. Most Mammalian mRNAs Are Conserved Targets of MicroRNAs. \
+    \Genome Research, Volume 19, 92-105, 2009.\n\
+    \[4] David M García., et al. Weak Seed-Pairing Stability and High Target-Site Abundance Decrease the Proficiency of lsy-6 and Other miRNAs. \
+    \Nat. Struct. Mol. Biol., Volume 18, 1139-1146, 2011.\n\
+    \[5] Enright AJ., el al. miRanda algorithm: MicroRNA targets in Drosophila. \
+    \Genome Biology, Volume 5, R1, 2003.\n\n"
+
+targetGeneSheetTemplate :: Stringable a => StringTemplate a
+targetGeneSheetTemplate =
+    newSTMP
+    "Predicted target genes for $miIdentity$\n\
+    \\n\n\
+    \# Column A: Seqname, the name the sequence.\n\
+    \# Column B: GeneSymbol, the official gene symbol of the sequence.\n\
+    \# Column C: Type, the type of the transcipt.\n\
+    \# Column D: Diagrams, the diagrams illustrate key features for miRNA binding. See Ref [1,2] for details.\n\
+    \# Column E: Total, the total number of the binding sites on the targets.\n\
+    \# Column F: Context+, the sum of the context+ scores used in TargetScan after version 6.0. More negative is better. See Ref [3,4] for details.\n\
+    \# Column G: Context, the sum of the context scores used in TargetScan before version 5.x. More negative is better. See Ref [1] for details.\n\
+    \# Column H: Structure, the sum of the structure scores used in miRanda (Ref [5]). The higher the better.\n\
+    \# Column I: Energy, the sum of the free energy predicted by miRanda (Ref [5]). More negative is better.\n\
+    \# Column J: Branch Length, the sum of the branch length in the phylogenetic tree of different species. The higher \
+    \means the binding site is more conserved (Ref [3]).\n\
+    \# Column K: Pct, the probability of preferentially conserved targeting (Ref [3]).  This score reflected the \
+    \Bayesian estimate of the probability that a site is conserved due to selective maintenance of miRNA \
+    \targeting rather than by chance or any other reason not pertinent to miRNA targeting.\n\
+    \# Column L ~ Column W: Counting numbers for different seed match types.\n\n\
+    \# Note:\n\
+    \Currently, there is not enough data for constructing phylogenetic tree of different species for LncRNAs. The \"Conservation\" \
+    \section is meaningless for LncRNA. All sites on LncRNA are treated as non-conserved ones.\n\
+    \\n\n\
+    \# Reference:\n\
+    \[1] Grimson A., et al. MicroRNA Targeting Specificity in Mammals: Determinants beyond Seed Pairing. \
+    \Molecular Cell, Volume 27, Issue 1, 91-105, 6 July 2007.\n\
+    \[2] Amy E. Pasquinelli. MicroRNAs and their targets: recognition, regulation and an emerging reciprocal relationship. \
+    \Nature Reviews Genetics, Volume 13, 271-282, 1 April 2012.\n\
+    \[3] Robin C Friedman, et al. Most Mammalian mRNAs Are Conserved Targets of MicroRNAs. \
+    \Genome Research, Volume 19, 92-105, 2009.\n\
+    \[4] David M García., et al. Weak Seed-Pairing Stability and High Target-Site Abundance Decrease the Proficiency of lsy-6 and Other miRNAs. \
+    \Nat. Struct. Mol. Biol., Volume 18, 1139-1146, 2011.\n\
+    \[5] Enright AJ., el al. miRanda algorithm: MicroRNA targets in Drosophila. \
+    \Genome Biology, Volume 5, R1, 2003.\n\n"
+    
+
+targetSiteSheetTemplate :: Stringable a => StringTemplate a
+targetSiteSheetTemplate =
+    newSTMP
+    "Predicted target genes for $miIdentity$\n\
+    \This sheet is intended for advanced users who want \
+    \more fine-grained control over filtering sites or building new site prodiction models.\n\
+    \\n\n\
+    \# Column A: Seqname, the name the sequence.\n\
+    \# Column B: GeneSymbol, the official gene symbol of the sequence.\n\
+    \# Column C: Type, the type of the transcipt.\n\
+    \# Column D: Diagrams, the diagrams illustrate key features for miRNA binding. See Ref [1,2] for details.\n\
+    \# Column E: Range, the position of the site. For coding genes, this is the position on 3'UTR. For LncRNAs, \
+    \this is the position on the full transcripts.\n\
+    \# Column F: Seed Match, the type for the seed match.\n\
+    \# Column G ~ L: The detialed components of the context+ score. See Ref [4] for details.\n\
+    \# Column M: The context+ score for the site.\n\
+    \# Column N ~ Q: The detialed components of the context score. See Ref [1] for details.\n\
+    \# Column R: The context score for the site.\n\
+    \# Column S ~ U: The detialed components for the 3'-Pairing, Local AU and Position scores defined in Ref [1].\n\
+    \# Column V,W: The thermodynamic properties of the binding site given by miRanda (Ref [5]).\n\
+    \# Column X ~ Z: The conservation score used in TargetScan. See Ref [3] for details.\n\
     \\n\n\
     \# Note:\n\
     \Currently, there is not enough data for constructing phylogenetic tree of different species for LncRNAs. The \"Conservation\" \
