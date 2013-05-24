@@ -13,7 +13,8 @@
 -----------------------------------------------------------------------------
 
 module MiRanda.Diagram
-       ( renderPDF
+       (
+         renderPDF
        , renderPNG
        , recordDiagram
        , tableDiagram
@@ -74,11 +75,11 @@ heightA4 = Height 840
     
 renderPDF :: FilePath -> Diagram Cairo R2 -> IO ()
 renderPDF outFile d =
-    fst $ renderDia Cairo (CairoOptions outFile (sizeSpec2D d) PDF False) d
+    fst $ renderDia Cairo (CairoOptions outFile widthA4 PDF False) d
 
 renderPNG :: FilePath -> Diagram Cairo R2 -> IO ()
 renderPNG outFile d =
-    fst $ renderDia Cairo (CairoOptions outFile (sizeSpec2D d) PNG False) d
+    fst $ renderDia Cairo (CairoOptions outFile widthA4 PNG False) d
 
 
 recordDiagram :: Record -> Diagram Cairo R2
