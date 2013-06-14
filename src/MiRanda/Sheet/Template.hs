@@ -131,7 +131,7 @@ geneSheetTemplate =
     \Nature Reviews Genetics, Volume 13, 271-282, 1 April 2012.\n\
     \[3] Robin C Friedman, et al. Most Mammalian mRNAs Are Conserved Targets of MicroRNAs. \
     \Genome Research, Volume 19, 92-105, 2009.\n\
-    \[4] David M García., et al. Weak Seed-Pairing Stability and High Target-Site Abundance Decrease the Proficiency of lsy-6 and Other miRNAs. \
+    \[4] David M Garcia., et al. Weak Seed-Pairing Stability and High Target-Site Abundance Decrease the Proficiency of lsy-6 and Other miRNAs. \
     \Nat. Struct. Mol. Biol., Volume 18, 1139-1146, 2011.\n\
     \[5] Enright AJ., el al. miRanda algorithm: MicroRNA targets in Drosophila. \
     \Genome Biology, Volume 5, R1, 2003.\n\n"
@@ -168,7 +168,7 @@ siteSheetTemplate =
     \Nature Reviews Genetics, Volume 13, 271-282, 1 April 2012.\n\
     \[3] Robin C Friedman, et al. Most Mammalian mRNAs Are Conserved Targets of MicroRNAs. \
     \Genome Research, Volume 19, 92-105, 2009.\n\
-    \[4] David M García., et al. Weak Seed-Pairing Stability and High Target-Site Abundance Decrease the Proficiency of lsy-6 and Other miRNAs. \
+    \[4] David M Garcia., et al. Weak Seed-Pairing Stability and High Target-Site Abundance Decrease the Proficiency of lsy-6 and Other miRNAs. \
     \Nat. Struct. Mol. Biol., Volume 18, 1139-1146, 2011.\n\
     \[5] Enright AJ., el al. miRanda algorithm: MicroRNA targets in Drosophila. \
     \Genome Biology, Volume 5, R1, 2003.\n\n"
@@ -204,7 +204,7 @@ targetGeneSheetTemplate =
     \Nature Reviews Genetics, Volume 13, 271-282, 1 April 2012.\n\
     \[3] Robin C Friedman, et al. Most Mammalian mRNAs Are Conserved Targets of MicroRNAs. \
     \Genome Research, Volume 19, 92-105, 2009.\n\
-    \[4] David M García., et al. Weak Seed-Pairing Stability and High Target-Site Abundance Decrease the Proficiency of lsy-6 and Other miRNAs. \
+    \[4] David M Garcia., et al. Weak Seed-Pairing Stability and High Target-Site Abundance Decrease the Proficiency of lsy-6 and Other miRNAs. \
     \Nat. Struct. Mol. Biol., Volume 18, 1139-1146, 2011.\n\
     \[5] Enright AJ., el al. miRanda algorithm: MicroRNA targets in Drosophila. \
     \Genome Biology, Volume 5, R1, 2003.\n\n"
@@ -243,7 +243,7 @@ targetSiteSheetTemplate =
     \Nature Reviews Genetics, Volume 13, 271-282, 1 April 2012.\n\
     \[3] Robin C Friedman, et al. Most Mammalian mRNAs Are Conserved Targets of MicroRNAs. \
     \Genome Research, Volume 19, 92-105, 2009.\n\
-    \[4] David M García., et al. Weak Seed-Pairing Stability and High Target-Site Abundance Decrease the Proficiency of lsy-6 and Other miRNAs. \
+    \[4] David M Garcia., et al. Weak Seed-Pairing Stability and High Target-Site Abundance Decrease the Proficiency of lsy-6 and Other miRNAs. \
     \Nat. Struct. Mol. Biol., Volume 18, 1139-1146, 2011.\n\
     \[5] Enright AJ., el al. miRanda algorithm: MicroRNA targets in Drosophila. \
     \Genome Biology, Volume 5, R1, 2003.\n\n"
