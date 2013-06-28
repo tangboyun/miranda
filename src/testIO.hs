@@ -48,15 +48,15 @@ main = do
  -- let ls = L8.lines $ L8.filter (/= '\r') str
  --     str' = L8.intercalate "\n" $ head ls : filter ((`elem` geneIDs).(!! 2) . L8.split '\t') (tail ls)
  -- L8.writeFile utrF' str'
-  fas <- readFasta inF
+--  fas <- readFasta inF
 -- rs <- 
- 
+    mkUTRFile spec arrayFasta arrayAnnoFile allUTRFile
 -- mapM_ (B8.putStrLn) $ toTargetScanOutFormat $ toSiteLines rs
 
 -- miRNAPredict spec (head fas) utrF >>= writeFile "/tmp/test.xml" . showSpreadsheet . mkSiteWorkbook "hsa-let-7i"
 -- miRNAPredict spec (head fas) utrF >>= writeFile "/tmp/test.xml" . showSpreadsheet . mkTargetWorkbook "Diagrams"
 -- mkUTRFile spec arrayFasta arrayAnnoFile allUTRFile
-  miRNAPredict spec (head fas) allUTRFile >>= toOutPut spec allUTRFile "/tmp/testMiR" toDiagrams
+--  miRNAPredict spec (head fas) allUTRFile >>= toOutPut spec allUTRFile "/tmp/testMiR" toDiagrams
 -- mkdir "/tmp/testMiR" >> miRNAPredict spec (head fas) utrF >>= toDiagrams "/tmp/testMiR" 
  
 -- rs <- miRNAPredict spec (head fas) utrF

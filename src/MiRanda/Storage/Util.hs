@@ -14,7 +14,7 @@
 
 module MiRanda.Storage.Util where
 
-import           Bio.Seq.EMBL
+import           Bio.Seq.EMBL 
 import qualified Data.ByteString.Char8 as B8
 import Data.ByteString (ByteString)
 import           Data.ByteString.Lazy.Builder
@@ -24,7 +24,7 @@ import           Data.List
 import qualified Data.Map.Strict as M
 import           Data.Maybe
 import qualified MiRanda.Storage.Type as ST
-import           MiRanda.Storage.Type hiding (seqdata)
+import           MiRanda.Storage.Type hiding (seqdata,accessions)
 import qualified MiRanda.Types as MT
 import           MiRanda.Util (renderFastas)
 import qualified Data.HashMap.Strict as H
@@ -60,7 +60,7 @@ emblsToMiRNAs miHash es =
       extractFromFeature rfam str f =
           let vM = M.fromList $ valuePairs f
               (beg,end) = case B8.readInt $ locationStr f of
-                  Just (i,str) -> case B8.readInt $ B8.dropWhile (== '.') str of
+                  Just (i,str1) -> case B8.readInt $ B8.dropWhile (== '.') str1 of
                       Just (j,"") -> (i-1,j)
                       Nothing -> error "error extractFromFeature: parsing j"
                   Nothing -> error "error extractFromFeature: parsing i"

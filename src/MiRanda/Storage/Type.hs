@@ -26,7 +26,9 @@ import MiRanda.Types (Gene(..)
                      )
 import Data.ByteString (ByteString)
 import Control.DeepSeq
-
+import qualified Data.Vector as V
+import qualified Data.Vector.Unboxed as UV
+import Data.Int
 
 data Expression = Coding
                 | NonCoding
@@ -74,6 +76,16 @@ data Family = Family
   , miRBaseID :: ByteString
   , miRNAFamily :: ByteString
   } deriving (Show,Eq)
+
+data EnDB = EnDB
+  { seqnames :: V.Vector ByteString
+  , genesymbols :: V.Vector ByteString
+  , identities :: V.Vector ByteString
+  , accessions :: V.Vector ByteString
+--  , datum :: [(UV.Vector Int,UV.Vector Double)]
+  , datContext :: UV.Vector Float
+  , datSite :: UV.Vector Int16
+  } deriving (Eq)
 
 instance NFData GeneRecord where
     rnf (GR gi mS) = rnf gi `seq` rnf mS `seq` ()

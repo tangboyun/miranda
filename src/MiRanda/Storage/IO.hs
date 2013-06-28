@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings,BangPatterns #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : 
@@ -29,14 +29,14 @@ import           Data.Function
 import qualified Data.HashMap.Strict as H
 import           Data.HashMap.Strict (HashMap(..))
 import           Data.List
-import           MiRanda.Binary
+import           MiRanda.Binary 
 import           MiRanda.BranchLen
 import           MiRanda.IO (mkProcess,toUTRs,orgToTaxID)
 import qualified MiRanda.IO as MI
 import           MiRanda.Score
-import           MiRanda.Storage.Type
+import           MiRanda.Storage.Type 
 import           MiRanda.Storage.Util
-import           MiRanda.Types
+import           MiRanda.Types hiding (gene,sites,contextScorePlus)
 import qualified MiRanda.Types as MT
 import           System.Directory
 import           System.Exit
@@ -44,14 +44,22 @@ import           System.IO
 import           System.Process
 import           MiRanda.Parser
 import           Data.Attoparsec.ByteString.Lazy
-import           Data.Binary.Builder
+import           Data.Binary.Builder hiding (toLazyByteString)
 import           Data.Binary
 import           Control.Parallel.Strategies
 import qualified Data.Binary.Get as G
 import Data.IORef
 import Data.HashSet (HashSet(..))
 import qualified Data.HashSet as S
-
+import qualified Data.Vector as V
+import qualified Data.Vector.Unboxed as UV
+import qualified Data.Vector.Unboxed.Mutable as UVM
+import Data.IORef
+import Control.DeepSeq
+import Data.ByteString.Lazy.Builder
+import Data.ByteString.Lazy.Builder.ASCII
+import Data.Monoid
+import System.FilePath
 
 runMiRanda :: FilePath -> FilePath -> IO [MRecord]
 runMiRanda miFasta utrFasta = do
@@ -225,13 +233,16 @@ preprocess = L8.unlines . filter
              L8.lines . L8.filter (/= '\r')
 
 byteStringToGRs :: L.ByteString -> [GeneRecord]
-byteStringToGRs b =
-    case G.runGetOrFail get b of
-        Right (b',_,r) -> r : byteStringToGRs b'
-        Left (b',_,s) ->
-            if L.null b'
-            then []
-            else error s
+{-# INLINE byteStringToGRs #-}
+byteStringToGRs b = go b
+  where
+    go bs = 
+        case G.runGetOrFail get bs of
+            Right (b',_,r) -> r : go b'
+            Left (b',_,s) ->
+                if L.null b'
+                then []
+                else error s
               
 parseRfam :: ByteString -> L8.ByteString -> HashMap ByteString (ByteString,ByteString)
 parseRfam spe str =
@@ -265,3 +276,86 @@ splitRecord str =
            else go is
       else go (j:is)
 {-# INLINE splitRecord #-}
+
+
+dbToEnDB :: ByteString -> FilePath -> FilePath -> FilePath -> IO ()
+dbToEnDB spe miRBase recordDB outDB = do
+    tmpDir <- getTemporaryDirectory
+    
+    (tmpGN,h1) <- openTempFile tmpDir "tmp.GN"
+    hClose h1
+    (tmpGS,h2) <- openTempFile tmpDir "tmp.GS"
+    hClose h2
+
+    L.readFile recordDB >>=
+        mapM_
+        (\ gr -> do
+              L8.appendFile tmpGN $ L8.append (L8.fromStrict $ ref $ gene $ geneInfo gr) "\n"
+              L8.appendFile tmpGS $ L8.append (L8.fromStrict $ syb $ gene $ geneInfo gr) "\n"
+        ) . byteStringToGRs
+
+    (ids,accs) <- L.readFile miRBase >>=
+                  -- 不同前体可能产生相同miRNA成熟体
+                  return . unzip . nubBy ((==) `on` fst) .
+                  map (identity &&& accession) .
+                  emblsToMiRNAs H.empty . filterEMBL spe . extractEMBL . GZ.decompress
+
+    seqns <- B8.readFile tmpGN >>=
+             return . B8.lines
+--    removeFile tmpGN
+    gss <- B8.readFile tmpGS >>=
+           return . B8.lines
+--    removeFile tmpGS
+    B8.writeFile "testMiR.txt" $ B8.unlines ids
+    B8.writeFile "testMiRACC.txt" $ B8.unlines ids
+                          
+    let seqV = V.fromList seqns
+        gsV = V.fromList gss
+        idV = V.fromList ids
+        accV = V.fromList accs
+        nSeq = V.length seqV -- n gene
+        nMiR = V.length idV
+        mirHash = H.fromList $ V.toList $ V.zip idV (V.enumFromN 0 $ V.length idV)
+        geneHash = H.fromList $ V.toList $ V.zip seqV (V.enumFromN 0 $ V.length seqV)
+        
+
+    L.readFile recordDB >>=
+        mapM_ 
+        (\gr -> do
+              let j = geneHash `myLookup` (ref . gene . geneInfo $ gr)
+                  vs = map
+                       (first (mirHash `myLookup`) .
+                        ((identity . mir) &&&
+                         (((realToFrac . maybe 0 contextPlus . foldl1 add .
+                            map contextScorePlus) &&&
+                           (fromIntegral . length)) . sites)
+                        )) $ mirSites gr
+              contV <- UVM.new nSeq
+              UVM.set contV 0
+              siteV <- UVM.new nSeq
+              UVM.set siteV 0
+              forM_ vs $ \(i,(co,si)) -> do
+                  UVM.write contV j co
+                  UVM.write siteV j si
+              cV <- UV.unsafeFreeze contV
+              sV <- UV.unsafeFreeze siteV
+              
+              let strC = foldr
+                         (\a b ->
+                           doubleDec a <> byteString "\t" <> b
+                         ) mempty $ UV.toList cV
+                  strS = foldr
+                         (\a b ->
+                           doubleDec a <> byteString "\t" <> b
+                         ) mempty $ UV.toList sV
+                         
+              L8.appendFile (outDB <.> ".site") $ toLazyByteString strS <> "\n"
+              L8.appendFile (outDB <.> ".context") $ toLazyByteString strC <> "\n"
+
+        ) . byteStringToGRs
+  where
+    myLookup h k = if k `H.member` h
+                   then h H.! k
+                   else error $
+                        show k ++ " not in hash"
+    

@@ -17,7 +17,6 @@ module MiRanda.Parameter where
 import MiRanda.Types
 import Data.IntMap.Strict (IntMap)
 import qualified Data.IntMap.Strict as IM
-import Data.ByteString (ByteString)
 
   
 taxMap :: IntMap Latin
@@ -45,8 +44,10 @@ taxMap =
   ,(28377, Latin "Anolis" "carolinensis" "Lizard") -- Green anole
   ,(30611, Latin "Otolemur" "garnettii" "Bushbaby") -- Small-eared galago
   ,(37347, Latin "Tupaia" "belangeri" "Tree Shrew") -- Northern tree shrew 树鼩 (乙肝模式动物)
-  ,(42254, Latin "Sorex" "araneus" "Shrew")] -- European shrew
-
+  ,(42254, Latin "Sorex" "araneus" "Shrew") -- European shrew
+  ,(9823, Latin "Sus" "scrofa" "Pig")
+  ]
+  
 siteContribMap :: IntMap (Maybe Double)
 siteContribMap = IM.fromList
                  [(fromEnum M8, Just (-0.31))

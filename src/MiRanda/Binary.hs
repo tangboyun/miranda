@@ -23,6 +23,7 @@ import Data.Word
 import qualified Codec.Compression.Zlib as Z
 import Data.ByteString.Lazy (ByteString)
 import Control.DeepSeq
+import Data.Vector.Binary
 
 compress :: Binary a => a -> ByteString
 {-# INLINE compress #-}
@@ -216,3 +217,13 @@ instance Binary GeneRecord where
         put b
     get = GR <$> get <*> get
 
+instance Binary EnDB where
+    put (EnDB a b c d e f) = do
+        put a
+        put b
+        put c
+        put d
+        put e
+        put f
+    get = EnDB <$> get <*> get <*> get <*>
+          get <*> get <*> get

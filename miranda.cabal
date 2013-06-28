@@ -25,6 +25,7 @@ library
                        MiRanda.Binary
                        MiRanda.Storage.IO
                        MiRanda.CeRNA
+                       MiRanda.Enrich
   other-modules:       
                        MiRanda.Sheet.SiteSheet
                        MiRanda.Sheet.TargetSheet
@@ -59,7 +60,8 @@ library
                        diagrams-cairo,process,directory,
                        time,split,bio-seq-embl,zlib,
                        HStringTemplate,diagrams-heatmap,
-                       statistics,text,mwc-random
+                       statistics,text,mwc-random,
+                       vector-binary-instances
 
   hs-source-dirs:      src
   ghc-options:         -Wall

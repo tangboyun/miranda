@@ -70,7 +70,10 @@ toOutPut spe allUTRFile outPath func mRs =
                     writeFile targetFile $ showSpreadsheet $
                         mkTargetWorkbook hRef rfs
                     writeFile siteFile $ showSpreadsheet $
-                        mkSiteWorkbook hRef sis) .
+                        mkSiteWorkbook hRef sis
+                    -- writeFile targetFile $ showSpreadsheet $
+                    --     mkTargetWorkbook hRef $ toRefLines rcs
+              ) .
               (\ss -> zip ss (getConservations ss)) . recordFilter . toRecord spe mRs
         
 splitList :: Int -> [a] -> [[a]]
@@ -379,7 +382,8 @@ mkUTRFile :: String -> FilePath -> FilePath -> FilePath -> IO ()
 mkUTRFile spe arrayFasta arrayAnno outUTR = do
     fseqs <- readFasta arrayFasta
     str <- L8.readFile arrayAnno
-    let fHash = H.fromList $ zip (map (L8.fromStrict.seqlabel) fseqs) $ map (L8.fromStrict . unSD . seqdata) fseqs
+    let fHash = H.fromList $ zip (map (L8.fromStrict.seqlabel) fseqs) $
+                map (L8.fromStrict . unSD . seqdata) fseqs
         atV = (V.!)
         h = "Refseq ID\tGene ID\tGene Symbol\tSpecies ID\tUTR sequence"
         ls = map
@@ -399,5 +403,7 @@ mkUTRFile spe arrayFasta arrayAnno outUTR = do
                (head $ tail ls) == "noncoding"
              ) $
              map (L8.split '\t') $
-             tail $ L8.lines $ L8.filter (/= '\r') str
-    L8.writeFile outUTR $ L8.unlines $ h:ls
+             tail $ L8.lines $
+             L8.filter (/= '\r') str
+    L8.writeFile outUTR $
+        L8.unlines $ h:ls
