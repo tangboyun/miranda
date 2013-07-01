@@ -318,6 +318,7 @@ toMRecords :: B8.ByteString -> [MRecord]
 toMRecords = f . flip feed "" . parse parseRecords . preprocess
   where
     f (Done _ r) = r
+    f (Fail "" _ _) = []
     f e = error $ show e
     
 preprocess :: B8.ByteString -> B8.ByteString
