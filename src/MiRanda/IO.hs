@@ -61,7 +61,11 @@ toOutPut spe allUTRFile outPath func mRs =
         targetFile = outPath </> "Target Genes.xml"
         siteFile = outPath </> "Target Sites.xml"
         hRef = dDir
-    in do
+    in if null mRs
+       then do
+        mkdir outPath
+        writeFile (outPath </> "No binding sites founded.txt") ""
+       else do
         mkdir outP
         readUTRs allUTRFile (map _mRNA mRs) >>=
               (\rcs -> do

@@ -29,7 +29,7 @@ import           Data.Monoid
 import           MiRanda.Score
 import           MiRanda.Sheet.Styles
 import           MiRanda.Storage.Type
-import           MiRanda.Types (Gene(..),ContextScorePlus(..),ContextScore(..),Conservation(..),SeedType(..),MScore(..),RawScore(..),Pair(..),PairScore(..),AUScore(..),PosScore(..))
+import           MiRanda.Types (Gene(..),ContextScorePlus(..),ContextScore(..),Conservation(..),SeedType(..),MScore(..),RawScore(..),Pair(..),PairScore(..),AUScore(..),PosScore(..),add)
 import           MiRanda.Util
 import           System.FilePath
 import           Text.Printf
@@ -182,8 +182,7 @@ toRow dDir (Gene s r) miSites =
       c = addScore (fromMaybe 0 . fmap context . contextScore) $ sites miSites
       struct = addScore (structureScore . miRandaScore) $ sites miSites
       free = addScore (freeEnergy . miRandaScore) $ sites miSites
-      bl = addScore (branchLength . conserveScore) $ sites miSites
-      pc = addScore (fromMaybe 0 . pct . conserveScore) $ sites miSites
+      (Con _ bl pc) = foldr1 add $ map conserveScore $ sites miSites
       m8c = countSite ((== M8) . seed) (isConserved . conserveScore) $ sites miSites
       m7m8c = countSite ((== M7M8) . seed) (isConserved . conserveScore) $ sites miSites
       m7a1c = countSite ((== M7A1) . seed) (isConserved . conserveScore) $ sites miSites
@@ -200,7 +199,7 @@ toRow dDir (Gene s r) miSites =
      string (B8.unpack mid) :
      href (mirPrefix ++ B8.unpack a) (B8.unpack a) # withStyleID "ref" :
      href path showStr # withStyleID "ref" :
-     map myDouble [nSite,csp,c,struct,free,bl,pc] ++
+     map myDouble [nSite,csp,c,struct,free,bl] ++ [maybe emptyCell myDouble pc] ++
      map (myDouble . fromIntegral) 
      [ m8c,m7m8c,m7a1c,m6c,m6oc,imc,
        m8n,m7m8n,m7a1n,m6n,m6on,imn] ++
