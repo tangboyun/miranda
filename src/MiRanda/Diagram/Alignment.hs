@@ -255,12 +255,18 @@ plotMultiAlign !utr !utrs !seedRange !siteRange =
                                 UV.length $
                                 UV.findIndices f vec
                       n = fromIntegral $ UV.length vec
-                      !a = count ((== 'A') . toUpper) / n
-                      !c = count ((== 'C') . toUpper) / n
-                      !g = count ((== 'G') . toUpper) / n
-                      !t = count ((== 'T') . toUpper) / n
-                      !u = count ((== 'U') . toUpper) / n
-                  in (a,c,g,t,u)
+                      entropy f = negate $ f * logBase 2 f
+                      !f_a = count ((== 'A') . toUpper) / n
+                      !f_c = count ((== 'C') . toUpper) / n
+                      !f_g = count ((== 'G') . toUpper) / n
+                      !f_t = count (liftA2 (||) (== 'T') (== 'U') . toUpper) / n
+                      !f_ = count ((== '-') . toUpper) / n
+                      r = logBase 2 5 - sum (map entropy [f_a,f_c,f_g,f_t,f_])
+                      a = f_a * r
+                      c = f_c * r
+                      g = f_g * r
+                      t = f_t * r
+                  in (a,c,g,t,t)
                  ) [0..(B8.length $ myHead strs)-1]
       at = (IM.!)
       dMatrix = map (plotOneChain siteStas) chss
