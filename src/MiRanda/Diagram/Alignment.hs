@@ -124,23 +124,23 @@ plotSeqStas isBW ts = map (plot . sortBy (flip compare `on` per) . tpToList) ts
                    A p ->
                      if p == 0
                      then mempty
-                     else aChar (toBW aColor) # scaleY (p/0.25)
+                     else aChar (toBW aColor) # scaleY (p/0.5)
                    T p ->
                      if p == 0
                      then mempty
-                     else tChar (toBW tColor) # scaleY (p/0.25)
+                     else tChar (toBW tColor) # scaleY (p/0.5)
                    U p ->
                      if p == 0
                      then mempty
-                     else uChar (toBW uColor) # scaleY (p/0.25)
+                     else uChar (toBW uColor) # scaleY (p/0.5)
                    C p ->
                      if p == 0
                      then mempty
-                     else cChar (toBW cColor) # scaleY (p/0.25)
+                     else cChar (toBW cColor) # scaleY (p/0.5)
                    G p ->
                      if p == 0
                      then mempty
-                     else gChar (toBW gColor) # scaleY (p/0.25))
+                     else gChar (toBW gColor) # scaleY (p/0.5))
 
 {-# INLINE diff #-}
 diff :: Pair -> ByteString -> ByteString -> Double
