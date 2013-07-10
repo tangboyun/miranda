@@ -129,23 +129,23 @@ plotSeqStas isBW ts = map (plot . sortBy (flip compare `on` per) . tpToList) ts
            map (\s ->
                  case s of
                    A p ->
-                     if p < 0.01
+                     if p < 0.02
                      then strutX w'
                      else aChar (toBW aColor) # scaleY (scaleFactor p)
                    T p ->
-                     if p < 0.01
+                     if p < 0.02
                      then strutX w'
                      else tChar (toBW tColor) # scaleY (scaleFactor p)
                    U p ->
-                     if p < 0.01
+                     if p < 0.02
                      then strutX w'
                      else uChar (toBW uColor) # scaleY (scaleFactor p)
                    C p ->
-                     if p < 0.01
+                     if p < 0.02
                      then strutX w'
                      else cChar (toBW cColor) # scaleY (scaleFactor p)
                    G p ->
-                     if p < 0.01
+                     if p < 0.02
                      then strutX w'
                      else gChar (toBW gColor) # scaleY (scaleFactor p)
                )
