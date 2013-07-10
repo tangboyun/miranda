@@ -37,6 +37,7 @@ import           MiRanda.Types
 import           Text.Printf
 import Diagrams.TwoD.Text
 import Data.Monoid (mappend)
+import Debug.Trace
 
 aColor = red
 gColor = green
@@ -106,11 +107,17 @@ stringC :: (Renderable Text b,Renderable (Path R2) b) => Colour Double -> String
 {-# INLINE stringC #-}
 stringC c str = hcat $ map (charC c) str
 
-plotSeqStas :: (Renderable Text b,Renderable (Path R2) b) => Bool -> [(Double,Double,Double,Double,Double)] -> [Diagram b R2]
+plotSeqStas :: (Renderable Text b,Renderable (Path R2) b, Backend b R2) => Bool -> [(Double,Double,Double,Double,Double)] -> [Diagram b R2]
 {-# INLINE plotSeqStas #-}
 plotSeqStas isBW ts = map (plot . sortBy (flip compare `on` per) . tpToList) ts
   where
-    tpToList (a,c,g,t,u) = [A a, C c, G g, T t, U u]
+    tpToList (a,c,g,t,u) =
+        let entropy f = if f == 0
+                        then 0
+                        else negate $ f * logBase 2 f
+            f_ = 1 - (a+c+g+t+u)
+            r = logBase 2 5 - sum (map entropy [a,c,g,t+u,f_])
+        in [A $ a * r, C $ c * r, G $ g * r, T $ t*r, U $ u * r]
     toBW = if isBW
            then luminosity
            else id
@@ -118,29 +125,31 @@ plotSeqStas isBW ts = map (plot . sortBy (flip compare `on` per) . tpToList) ts
                    let c = 0.21 * r + 0.71 * g + 0.07 * b
                    in sRGB c c c
                    ) . toSRGB
-    plot = alignB . vcat .
+    scaleFactor p = 4 * p / logBase 2 5
+    plot = centerXY . (<> strutY (4 * h) # alignB) . alignB . vcat .
            map (\s ->
                  case s of
                    A p ->
-                     if p == 0
-                     then mempty
-                     else aChar (toBW aColor) # scaleY (p/0.5)
+                     if p < 0.01
+                     then strutX w'
+                     else aChar (toBW aColor) # scaleY (scaleFactor p) # centerXY
                    T p ->
-                     if p == 0
-                     then mempty
-                     else tChar (toBW tColor) # scaleY (p/0.5)
+                     if p < 0.01
+                     then strutX w'
+                     else tChar (toBW tColor) # scaleY (scaleFactor p) # centerXY
                    U p ->
-                     if p == 0
-                     then mempty
-                     else uChar (toBW uColor) # scaleY (p/0.5)
+                     if p < 0.01
+                     then strutX w'
+                     else uChar (toBW uColor) # scaleY (scaleFactor p) # centerXY
                    C p ->
-                     if p == 0
-                     then mempty
-                     else cChar (toBW cColor) # scaleY (p/0.5)
+                     if p < 0.01
+                     then strutX w'
+                     else cChar (toBW cColor) # scaleY (scaleFactor p) # centerXY
                    G p ->
-                     if p == 0
-                     then mempty
-                     else gChar (toBW gColor) # scaleY (p/0.5))
+                     if p < 0.01
+                     then strutX w'
+                     else gChar (toBW gColor) # scaleY (scaleFactor p)
+               )
 
 {-# INLINE diff #-}
 diff :: Pair -> ByteString -> ByteString -> Double
@@ -243,8 +252,8 @@ plotMultiAlign !utr !utrs !seedRange !siteRange =
                                        ,siteRE - siteRB
                                        ,(B8.length $ myHead strs)-siteRE]
                                        seqStas
-      maxH = 4 * h * (maximum $
-                      map (\(a,c,g,t,u) -> maximum [a,c,g,t,u]) seqStas)
+      maxH = 4 * h 
+      n = fromIntegral $ 1 + length utrs
       seqStas = map
                 (\i ->
                   let vec = UV.fromList $
@@ -254,19 +263,12 @@ plotMultiAlign !utr !utrs !seedRange !siteRange =
                       count f = fromIntegral $!
                                 UV.length $
                                 UV.findIndices f vec
-                      n = fromIntegral $ UV.length vec
-                      entropy f = negate $ f * logBase 2 f
-                      !f_a = count ((== 'A') . toUpper) / n
-                      !f_c = count ((== 'C') . toUpper) / n
-                      !f_g = count ((== 'G') . toUpper) / n
-                      !f_t = count (liftA2 (||) (== 'T') (== 'U') . toUpper) / n
-                      !f_ = count ((== '-') . toUpper) / n
-                      r = logBase 2 5 - sum (map entropy [f_a,f_c,f_g,f_t,f_])
-                      a = f_a * r
-                      c = f_c * r
-                      g = f_g * r
-                      t = f_t * r
-                  in (a,c,g,t,t)
+                      !a = count ((== 'A') . toUpper) / n
+                      !c = count ((== 'C') . toUpper) / n
+                      !g = count ((== 'G') . toUpper) / n
+                      !t = count ((== 'T') . toUpper) / n
+                      !u = count ((== 'U') . toUpper) / n
+                  in (a,c,g,t,u)
                  ) [0..(B8.length $ myHead strs)-1]
       at = (IM.!)
       dMatrix = map (plotOneChain siteStas) chss
@@ -305,15 +307,19 @@ plotMultiAlign !utr !utrs !seedRange !siteRange =
       rLen = maximum $ map length rs            
       dM = vcat $ fstLine : (tailLs ++ [centerX $ strutY 0.8 === charStas])
       coef = 0.5
+      conBar = centerXY $
+               hrule 0.2 === vrule (2*h) === hrule 0.2 === vrule (2*h) ===
+               hrule 0.2
       lhs = vcat (map
                   (\nm ->
                     text nm # font serifFont <>
                     rect (fromIntegral nameLen * coef) 1
                     # lcA transparent
                   ) names) ===
-            (text con # font serifFont <>
-             rect (fromIntegral nameLen * coef) (0.8 + maxH)
-             # lcA transparent
+            (strutY 0.8 ===
+             (((text con # font serifFont) <> rect (fromIntegral nameLen * coef) h # lcA transparent
+              ) ||| conBar
+             )
             )
       rhs = vcat (map
                   (\r ->
