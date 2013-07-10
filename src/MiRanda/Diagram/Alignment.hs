@@ -37,7 +37,6 @@ import           MiRanda.Types
 import           Text.Printf
 import Diagrams.TwoD.Text
 import Data.Monoid (mappend)
-import Debug.Trace
 
 aColor = red
 gColor = green
