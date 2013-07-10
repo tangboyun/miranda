@@ -30,7 +30,7 @@ import           Data.List.Split
 import           Data.Maybe
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
-import           Diagrams.Prelude hiding (diff,beg,end,trace)
+import           Diagrams.Prelude hiding (diff,end,trace)
 import           MiRanda.Parameter
 import           MiRanda.Util
 import           MiRanda.Types
