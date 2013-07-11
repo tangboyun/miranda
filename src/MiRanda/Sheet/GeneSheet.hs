@@ -40,7 +40,7 @@ import MiRanda.Sheet.Template
 import Control.Arrow
 import Data.Function
 
-miRBaseVersion = "19"
+miRBaseVersion = "20"
 
 mkGeneWorkbook :: String -> GeneRecord -> Workbook
 mkGeneWorkbook dDir r =
@@ -135,7 +135,8 @@ classLine = mkRow
              # mergeAcross 5
              # withStyleID "poor"
             ,string "Annotations"
-             # mergeAcross 4
+--             # mergeAcross 4
+             # mergeAcross 3
              # withStyleID "anno"
             ]
 
@@ -163,7 +164,7 @@ nameCells = [string "Identity"
             ,string "Imperfect"
             ,string "Rfam"
             ,string "miRBase"
-            ,string "Family"
+--            ,string "Family"
             ,string "isExperimentalValidated"
             ,string "Sequence"
             ]
@@ -209,14 +210,18 @@ toRow dDir (Gene s r) miSites =
     MiRNA mid a b rfam sdat = mir miSites
     rFamAnnos = case rfam of
         Just (Family rID mID fName) ->
-            [if B8.null rID
+            [if B8.null fName
+--           if B8.null rID                
              then emptyCell
-             else href (rFamPrefix ++ B8.unpack rID) (B8.unpack rID) # withStyleID "ref"
+--             else href (rFamPrefix ++ B8.unpack rID) (B8.unpack rID) # withStyleID "ref"
+             else href (rFamPrefix ++ B8.unpack fName) (B8.unpack fName) # withStyleID "ref"
             ,if B8.null mID
              then emptyCell
              else href (mirFamilyPrefix ++ B8.unpack mID) (B8.unpack mID) # withStyleID "ref" 
-            ,string (B8.unpack fName)]
-        Nothing -> [emptyCell,emptyCell,emptyCell]
+--            ,string (B8.unpack fName)
+            ]
+--        Nothing -> [emptyCell,emptyCell,emptyCell]
+        Nothing -> [emptyCell,emptyCell]
     rFamPrefix = "http://rfam.sanger.ac.uk/family/"
     mirFamilyPrefix = "http://www.mirbase.org/cgi-bin/mirna_summary.pl?fam="
 

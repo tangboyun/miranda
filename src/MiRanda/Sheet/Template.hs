@@ -116,9 +116,8 @@ geneSheetTemplate =
     \# Column K ~ Column V: Counting numbers for different seed match types.\n\
     \# Column W: Rfam, the Rfam family annotations.\n\
     \# Column X: miRBase, the miRBase family annotations.\n\
-    \# Column Y: Family, the family name for the miRNA.\n\
-    \# Column Z: isExperimentalValidated, whether this miRNA is validated by experimental evidence.\n\
-    \# Column AA: Sequence, the sequence for the miRNA.\n\
+    \# Column Y: isExperimentalValidated, whether this miRNA is validated by experimental evidence.\n\
+    \# Column Z: Sequence, the sequence for the miRNA.\n\
     \\n\n\
     \# Note:\n\
     \Currently, there is not enough data for constructing phylogenetic tree of different species for LncRNAs. The \"Conservation\" \
