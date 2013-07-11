@@ -343,7 +343,7 @@ toUTRs = map
   where f (refId:_:syb:tax:sdata:[]) = case L8.readInt tax of
                                        Just (taxId,_) -> UTR (L8.toStrict syb) (L8.toStrict refId) taxId (GS $ L8.toStrict sdata)
                                        _              -> error "Fail in parse UTR sequence."
-        f other = error $ show other
+        f other = error $ "error in toUTRs: " ++ show other
 
 
 toFastas :: [UTR] -> ByteString
