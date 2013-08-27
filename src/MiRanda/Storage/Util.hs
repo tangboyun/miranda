@@ -60,13 +60,14 @@ emblsToMiRNAs miHash es =
       extractFromFeature rfam str f =
           let vM = M.fromList $ valuePairs f
               (beg,end) = case B8.readInt $ locationStr f of
-                  Just (i,str1) -> case B8.readInt $ B8.dropWhile (== '.') str1 of
-                      Just (j,"") -> (i-1,j)
-                      Nothing -> error "error extractFromFeature: parsing j"
+                  Just (i,str1) ->
+                      case B8.readInt $ B8.dropWhile (== '.') str1 of
+                          Just (j,"") -> (i-1,j)
+                          Nothing -> error "error extractFromFeature: parsing j"
                   Nothing -> error "error extractFromFeature: parsing i"
               removeP s = B8.filter (/= '"') s
           in MiRNA
-             (removeP $ vM M.! "product") 
+             (removeP $ vM M.! "product")
              (removeP $ vM M.! "accession")
              (vM M.! "evidence" == "experimental")
              rfam

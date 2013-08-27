@@ -194,12 +194,6 @@ toRow !dDir !sl =
     toNCBILink l = let s = B8.unpack l
                    in href ("http://www.ncbi.nlm.nih.gov/nuccore/" ++ s ++ "?report=genbank") s
                       # withStyleID "ref"
-    myMakeValid fp = let cs = ":*?\"<>|"
-                     in map (\c ->
-                              if c `elem` cs
-                              then '_'
-                              else c
-                            ) fp
      
   
 myDouble :: Double -> Cell

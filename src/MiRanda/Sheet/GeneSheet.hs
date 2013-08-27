@@ -176,7 +176,7 @@ toRow dDir (Gene s r) miSites =
   let base = B8.unpack
              (mid <> " vs " <>
               r <> "(" <> s <> ")") <.> "pdf"
-      path = dDir </> base
+      path = myMakeValid $ dDir </> base
       showStr = "Click Me"
       nSite = fromIntegral $ length $ sites miSites
       csp = addScore (fromMaybe 0 . fmap contextPlus . contextScorePlus) $ sites miSites
@@ -246,7 +246,7 @@ toRows dDir (Gene s r) ms =
       let base = B8.unpack
                  (i <> " vs " <>
                   r <> "(" <> s <> ")") <.> "pdf"
-          path = dDir </> base
+          path = myMakeValid $ dDir </> base
           showStr = "Click Me"
           p = (beg &&& end) . siteRange $ si
       in mkRow $
