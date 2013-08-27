@@ -135,18 +135,18 @@ dumpDB spe utrFile miRBase miRFam outDB = do
 
 
 dumpDBWithHashPair :: String -> FilePath -> FilePath -> FilePath -> (HashSet ByteString,HashSet ByteString) -> FilePath -> IO ()
-dumpDBWithHashPair spe utrFile miRBase miRFam (miHash,mRHash) outDB = do
+dumpDBWithHashPair spe utrFile miRBase miRFam (miRNASet,mRSet) outDB = do
     let spe3 = case map toLower spe of
             "human" -> "HSA"
             "mouse" -> "MMU"
             "rat"   -> "RNO"
             _ -> error "spe not supported"
-        filterMiRNA = if S.null miHash
+        filterMiRNA = if S.null miRNASet
                       then id
-                      else filter ((`S.member` miHash) . identity)
-        filterUTR = if S.null mRHash
+                      else filter ((`S.member` miRNASet) . identity)
+        filterUTR = if S.null mRSet
                     then id
-                    else filter ((`S.member` mRHash) . refSeqID)
+                    else filter ((`S.member` mRSet) . refSeqID)
 
                          
     tmpDir <- getTemporaryDirectory
