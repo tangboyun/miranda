@@ -53,6 +53,9 @@ import qualified Data.HashMap.Strict as H
 import qualified Data.Vector as V
 data Token = Token
 
+getSupportedSpecs :: [B8.ByteString]
+getSupportedSpecs = map (commonName . snd) $ IM.toList taxMap
+
 toOutPut :: String -> FilePath -> FilePath -> (FilePath -> Record -> IO ()) -> [MRecord] -> IO ()
 {-# INLINE toOutPut #-}
 toOutPut spe allUTRFile outPath func mRs =
@@ -387,7 +390,8 @@ mkUTRFile :: String -> FilePath -> FilePath -> FilePath -> IO ()
 mkUTRFile spe arrayFasta arrayAnno outUTR = do
     fseqs <- readFasta arrayFasta
     str <- L8.readFile arrayAnno
-    let fHash = H.fromList $ zip (map (L8.fromStrict.seqlabel) fseqs) $
+    let fHash = H.fromList $
+                zip (map (L8.fromStrict.seqlabel) fseqs) $
                 map (L8.fromStrict . unSD . seqdata) fseqs
         atV = (V.!)
         h = "Refseq ID\tGene ID\tGene Symbol\tSpecies ID\tUTR sequence"
