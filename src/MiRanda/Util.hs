@@ -250,3 +250,11 @@ renderFastas =
                            else byteString h <>
                                 charUtf8 '\n' <>
                                 splitEvery n t
+
+myMakeValid :: FilePath -> FilePath
+myMakeValid fp = let cs = ":*?\"<>|"
+                 in map (\c ->
+                          if c `elem` cs
+                          then '_'
+                          else c
+                        ) fp
