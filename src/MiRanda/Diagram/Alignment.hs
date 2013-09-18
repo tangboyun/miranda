@@ -213,9 +213,9 @@ plotMultiAlign !utr !utrs !seedRange !siteRange =
           B8.unpack $ seqStr
       strLen = UV.maximum s
       seedBeg = fromJust $! UV.findIndex (== (1+beg seedRange)) s
-      seedEnd = 1+fromJust $! UV.findIndex (== (end seedRange)) s
+      seedEnd = 1 + (fromJust $! UV.findIndex (== (end seedRange)) s)
       siteBeg = fromJust $! UV.findIndex (== (1+beg siteRange)) s
-      siteEnd = 1+fromJust $! UV.findIndex (== (end siteRange)) s
+      siteEnd = 1 + (fromJust $! UV.findIndex (== (end siteRange)) s)
       siteLen = siteEnd - siteBeg
       (!exBeg,!exEnd) = if siteLen < 60
                         then let !b = ceiling $ (60 - fromIntegral siteLen) / 2
