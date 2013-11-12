@@ -230,13 +230,28 @@ miRNAPredict spe miFasta@(Fasta sid _) allUTRFile =
         utrFile = tmpDir </> B8.unpack sid <.> "utr"
     writeMiR miFile miFasta
     dumpGenome spe allUTRFile utrFile
-    proP <- mkProcess miFile utrFile
-    (_,Just outH,_,pH) <- createProcess proP
-    mRs <- return . mRecordFilter . toMRecords =<< B8.hGetContents outH
-    ex <- waitForProcess pH
-    case ex of
-        ExitSuccess -> return mRs
-        _ -> exitWith ex
+    prog <- findExecutable "miranda"
+    case prog of
+        Nothing -> error "Cant find miranda in PATH."
+        Just program -> do
+            tmpD <- getTemporaryDirectory
+            (fpIn,hIn) <- openTempFile tmpD "tmpIn.txt"
+            (fpOut,hOut) <- openTempFile tmpD "tmpOut.txt"
+            (fpErr,hErr) <- openTempFile tmpD "tmpErr.txt"
+            ex <- waitForProcess =<<
+                  runProcess program [miFile,utrFile] Nothing Nothing
+                  (Just hIn) (Just hOut) (Just hErr)
+            case ex of
+                ExitSuccess ->
+                    hClose hIn >> removeFile fpIn >>
+                    hClose hErr >> removeFile fpErr >>
+                    B8.hGetContents hOut >>=
+                    return . mRecordFilter . toMRecords 
+                _ ->
+                    hClose hIn >> removeFile fpIn >>
+                    hClose hOut >> removeFile fpOut >>
+                    hClose hErr >> removeFile fpErr >>
+                    exitWith ex
 
 mRecordFilter :: [MRecord] -> [MRecord]
 {-# INLINE mRecordFilter #-}
