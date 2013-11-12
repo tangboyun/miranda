@@ -14,14 +14,12 @@
 module MiRanda.Score where
 
 import           Control.Applicative
-import           Control.Arrow
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as B8
 import           Data.Char
 import qualified Data.HashMap.Strict as H
 import qualified Data.IntMap.Strict as IM
 import           Data.List
-import Data.Monoid
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
 import           MiRanda.BranchLen
@@ -32,9 +30,6 @@ import           MiRanda.Parameter.FSPPara
 import           MiRanda.Parameter.PCT
 import           MiRanda.Types
 import           MiRanda.Util
-import Text.Printf
-import Data.Function
-
 
 
 atV :: V.Vector a -> Int -> a
@@ -354,62 +349,3 @@ getContextScorePlus st ali rawScore =
       in reg * (s' - mean)
 {-# INLINE getContextScorePlus #-}
 
-mergeScore :: (Record,[Conservation]) -> RefLine
-mergeScore (!r,!cs) =
-    let ss = predictedSites r
-        !totalM = foldl1' add $ map miRandaScore ss
-        !totalCon = foldl1' add cs
-        !totalR = foldl1' add $ map rawScore ss
-        !totalCS = foldl1' add $ map contextScore ss
-        !totalCSP = foldl1' add $ map contextScorePlus ss
-        !totalS = length ss
-        (!conSite,!nonConSite) =
-            foldl'
-            (\(con@(!a1,!b1,!c1,!d1,!e1,!f1),nonCon@(!a2,!b2,!c2,!d2,!e2,!f2)) (s,c) ->
-              if isConserved c
-              then let con' = case seedType s of
-                           M8 -> (a1+1,b1,c1,d1,e1,f1)
-                           M7M8 -> (a1,b1+1,c1,d1,e1,f1)
-                           M7A1 -> (a1,b1,c1+1,d1,e1,f1)
-                           M6 -> (a1,b1,c1,d1+1,e1,f1)
-                           M6O -> (a1,b1,c1,d1,e1+1,f1)
-                           Imperfect -> (a1,b1,c1,d1,e1,f1+1)
-                   in (con',nonCon)
-              else let nonCon' = case seedType s of
-                           M8 -> (a2+1,b2,c2,d2,e2,f2)
-                           M7M8 -> (a2,b2+1,c2,d2,e2,f2)
-                           M7A1 -> (a2,b2,c2+1,d2,e2,f2)
-                           M6 -> (a2,b2,c2,d2+1,e2,f2)
-                           M6O -> (a2,b2,c2,d2,e2+1,f2)
-                           Imperfect -> (a2,b2,c2,d2,e2,f2+1)
-                   in (con,nonCon')
-            ) ((0,0,0,0,0,0),(0,0,0,0,0,0)) $ zip ss cs
-        !ut = utr r
-        !u = B8.filter isAlpha . extractSeq . utr $ r
-        !ul = B8.length u
-        !g = Gene (B8.copy $ geneSymbol ut) (B8.copy $ refSeqID ut)
-    in RL (B8.copy $ miRNA r) g totalM totalCon totalR totalCS
-       totalCSP totalS conSite nonConSite ul u
-{-# INLINE mergeScore #-}        
-
-getSites :: [(Record,[Conservation])] -> [SiteLine]
-{-# INLINE getSites #-}
-getSites rs =
-    concatMap
-    (\(!r,!cons) -> 
-      let !ss = predictedSites r
-          !mi = B8.copy $ miRNA r
-          !u = utr r
-          !g = Gene (B8.copy $ geneSymbol u) (B8.copy $ refSeqID u)
-          !sls = map (\(!con,!s) ->
-                       let !raw = rawScore s
-                           !mS = miRandaScore s
-                           !conS = contextScore s
-                           !conSP = contextScorePlus s
-                           !seedM = seedMatchRange s
-                           !siteM = utrRange s
-                           !st = seedType s
-                           !al = align s
-                       in SL mi g mS con raw conS conSP seedM siteM st al
-                     ) $ zip cons ss
-          in sls) rs

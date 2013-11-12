@@ -18,9 +18,7 @@ module MiRanda.Sheet.SiteSheet
        )
        where
 
-import           Data.ByteString.Char8 (ByteString)
 import qualified Data.ByteString.Char8 as B8
-import           Data.Colour.Names
 import           MiRanda.Sheet.Styles
 import           MiRanda.Sheet.Template
 import           MiRanda.Types
@@ -29,16 +27,32 @@ import           Text.XML.SpreadsheetML.Builder
 import           Text.XML.SpreadsheetML.Types
 import           Text.XML.SpreadsheetML.Util
 import Data.List
-import Data.Char
 import Text.Printf
-import MiRanda.Score
 import Data.Maybe
 import System.FilePath
 import Data.Monoid
+import Control.DeepSeq
 
-toSiteLines :: [(Record,[Conservation])] -> [SiteLine]
+toSiteLines :: (Record,[Conservation]) -> [SiteLine]
 {-# INLINE toSiteLines #-}
-toSiteLines rs = getSites rs
+toSiteLines (r,cons) = 
+    let ss = predictedSites r
+        mi = B8.copy $ miRNA r
+        u = utr r
+        g = Gene (B8.copy $ geneSymbol u) (B8.copy $ refSeqID u)
+        sls = map
+              (\(con,s) ->
+                let raw = rawScore s
+                    mS = miRandaScore s
+                    conS = contextScore s
+                    conSP = contextScorePlus s
+                    seedM = seedMatchRange s
+                    siteM = utrRange s
+                    st = seedType s
+                    al = align s
+                in force $ SL mi g mS con raw conS conSP seedM siteM st al
+              ) $ zip cons ss
+    in force sls
 
 
 mkSiteWorkbook :: String -> [SiteLine] -> Workbook

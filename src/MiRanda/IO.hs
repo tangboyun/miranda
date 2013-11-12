@@ -51,6 +51,8 @@ import           Text.Printf
 import           Text.XML.SpreadsheetML.Writer (showSpreadsheet)
 import qualified Data.HashMap.Strict as H
 import qualified Data.Vector as V
+import Control.DeepSeq
+
 data Token = Token
 
 getSupportedSpecs :: [B8.ByteString]
@@ -72,14 +74,17 @@ toOutPut spe allUTRFile outPath func mRs =
         mkdir outP
         readUTRs allUTRFile (map _mRNA mRs) >>=
               (\rcs -> do
-                    mapM_ (func outP) $ map fst rcs
-                    (rfs,sis) <- return $ (toRefLines &&& toSiteLines) rcs
+                    (rfs,siss) <- fmap unzip $
+                                  mapM
+                                  (\rc@(gr,_) -> 
+                          
+                                   func outP gr >> 
+                                   return (force $ (mergeScore &&& toSiteLines) rc)
+                                 ) $ rcs
                     writeFile targetFile $ showSpreadsheet $
                         mkTargetWorkbook hRef rfs
                     writeFile siteFile $ showSpreadsheet $
-                        mkSiteWorkbook hRef sis
-                    -- writeFile targetFile $ showSpreadsheet $
-                    --     mkTargetWorkbook hRef $ toRefLines rcs
+                        mkSiteWorkbook hRef $ concat siss
               ) .
               (\ss -> zip ss (getConservations ss)) . recordFilter . toRecord spe mRs
         
