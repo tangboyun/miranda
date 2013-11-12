@@ -1,4 +1,5 @@
 {-# LANGUAGE GADTs, GeneralizedNewtypeDeriving, BangPatterns #-}
+{-# OPTIONS_GHC -funbox-strict-fields #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : 
@@ -15,7 +16,6 @@
 module MiRanda.Types where
 
 import Data.ByteString (ByteString)
-import Data.Vector.Unboxed
 import Data.Monoid
 import Data.Binary
 import Control.DeepSeq
@@ -64,15 +64,15 @@ data Conservation = Con
   
 
 data Fasta = Fasta
-  { seqlabel :: ByteString
-  , seqdata :: SeqData
+  { seqlabel :: !ByteString
+  , seqdata :: !SeqData
   } deriving (Show,Eq)
 
 data UTR = UTR
   {geneSymbol :: !ByteString
   ,refSeqID :: !ByteString
   ,taxonomyID :: !Int
-  ,alignment :: GapSeq
+  ,alignment :: !GapSeq
   } deriving (Show,Eq)
 
 newtype GapSeq = GS
@@ -87,8 +87,8 @@ data Record = Record
   {miRNA :: !ByteString
   ,gene :: !ByteString -- refSeqID
   ,utr :: !UTR -- ref utr
-  ,homoUTRs :: ![UTR] -- utrs except for ref utr
-  ,predictedSites :: ![Site]
+  ,homoUTRs :: [UTR] -- utrs except for ref utr
+  ,predictedSites :: [Site]
   } deriving (Show,Eq)
 
 data Site = Site
@@ -106,17 +106,17 @@ data Site = Site
 data MRecord = MRecord
   { _miRNA :: !ByteString
   , _mRNA :: !ByteString -- refSeqID
-  , sites :: ![MSite]
-  , strand :: {-# UNPACK #-} !Int
-  , miRNALen :: {-# UNPACK #-} !Int
-  , mRNALen :: {-# UNPACK #-} !Int    
+  , sites :: [MSite]
+  , strand :: !Int
+  , miRNALen :: !Int
+  , mRNALen :: !Int    
   } deriving (Show)
 
 data MSite = MSite
   { _mScore :: !MScore 
   , _miRNARange :: !Pair
   , _mRNARange :: !Pair
-  , _alignLen :: {-# UNPACK #-} !Int
+  , _alignLen :: !Int
   , _match :: !Match
   , _seedType :: !SeedType
   , _align :: !Align
@@ -129,27 +129,27 @@ data Latin = Latin
   } deriving (Eq)
 
 data Setting = Setting
-  { gapOpenPenalty :: {-# UNPACK #-} !Double
-  , gapExtendPenalty :: {-# UNPACK #-} !Double
-  , scoreThreshold :: {-# UNPACK #-} !Double
-  , energyThreshold :: {-# UNPACK #-} !Double
-  , scalingParameter :: {-# UNPACK #-} !Double
+  { gapOpenPenalty :: !Double
+  , gapExtendPenalty :: !Double
+  , scoreThreshold :: !Double
+  , energyThreshold :: !Double
+  , scalingParameter :: !Double
   } deriving (Show,Eq)
 
 data Pair = P
-  { beg :: {-# UNPACK #-} !Int -- begin at 0
-  , end :: {-# UNPACK #-} !Int -- not include end
+  { beg :: !Int -- begin at 0
+  , end :: !Int -- not include end
   } deriving (Show,Eq,Ord)
 
 data MScore = MScore
-  { structureScore :: {-# UNPACK #-} !Double
-  , freeEnergy :: {-# UNPACK #-} !Double
+  { structureScore :: !Double
+  , freeEnergy :: !Double
   } deriving (Show,Eq)
              
 
 data Match = Match
-  { wasonClick :: {-# UNPACK #-} !Int
-  , includeGU :: {-# UNPACK #-} !Int
+  { wasonClick :: !Int
+  , includeGU :: !Int
   } deriving (Show,Eq)
 
 data Align = Align
@@ -175,26 +175,26 @@ data SeedType = M8   -- ^ 8mer site
               deriving (Eq,Ord,Enum)
 
 data ContextScore = CS
-  {context :: {-# UNPACK #-} !Double
-  ,pairingContrib :: {-# UNPACK #-} !Double
-  ,localAUContrib :: {-# UNPACK #-} !Double
-  ,positionContrib :: {-# UNPACK #-} !Double
-  ,siteTypeContrib :: {-# UNPACK #-} !Double
+  {context :: !Double
+  ,pairingContrib :: !Double
+  ,localAUContrib :: !Double
+  ,positionContrib :: !Double
+  ,siteTypeContrib :: !Double
   } deriving (Eq,Ord,Show)
 
 data ContextScorePlus = CSP
-  {contextPlus :: {-# UNPACK #-} !Double
-  ,pairingContribPlus :: {-# UNPACK #-} !Double
-  ,localAUContribPlus :: {-# UNPACK #-} !Double
-  ,positionContribPlus :: {-# UNPACK #-} !Double
-  ,taContribPlus :: {-# UNPACK #-} !Double
-  ,spsContribPlus :: {-# UNPACK #-} !Double
-  ,siteTypeContribPlus :: {-# UNPACK #-} !Double
+  {contextPlus :: !Double
+  ,pairingContribPlus ::  !Double
+  ,localAUContribPlus ::  !Double
+  ,positionContribPlus ::  !Double
+  ,taContribPlus ::  !Double
+  ,spsContribPlus ::  !Double
+  ,siteTypeContribPlus ::  !Double
   } deriving (Eq,Ord,Show)
              
 data Coef = Coef
-  {slope :: {-# UNPACK #-} !Double
-  ,intercept :: {-# UNPACK #-} !Double
+  {slope ::  !Double
+  ,intercept ::  !Double
   } deriving (Eq,Ord)
    
 data RawScore = RS
@@ -368,8 +368,28 @@ instance NFData Align where
         rnf a `seq` rnf b `seq` rnf c `seq` ()
 
 instance NFData ContextScore where
-    rnf (CS !a !b !c !d !e) = ()
+    rnf (CS a b c d e) = rnf a `seq` rnf b `seq`
+                         rnf c `seq` rnf d `seq`
+                         rnf e `seq` ()
 
 instance NFData ContextScorePlus where
-    rnf (CSP !a !b !c !d !e !f !g) = ()
+    rnf (CSP a b c d e f g) = rnf a `seq` rnf b `seq`
+                              rnf c `seq` rnf d `seq`
+                              rnf e `seq` rnf f `seq`
+                              rnf g `seq` ()
     
+instance NFData RefLine where
+    rnf (RL a b c d e f g h i j k l) = rnf a `seq` rnf b `seq`
+                                       rnf c `seq` rnf d `seq`
+                                       rnf e `seq` rnf f `seq`
+                                       rnf g `seq` rnf h `seq`                                       
+                                       rnf i `seq` rnf j `seq`
+                                       rnf k `seq` rnf l `seq` ()
+
+instance NFData SiteLine where
+    rnf (SL a b c d e f g h i j k) = rnf a `seq` rnf b `seq`
+                                     rnf c `seq` rnf d `seq`
+                                     rnf e `seq` rnf f `seq`
+                                     rnf g `seq` rnf h `seq`                                       
+                                     rnf i `seq` rnf j `seq`
+                                     rnf k `seq` ()
