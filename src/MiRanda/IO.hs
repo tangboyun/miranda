@@ -74,12 +74,12 @@ toOutPut spe allUTRFile outPath func mRs =
         mkdir outP
         readUTRs allUTRFile (map _mRNA mRs) >>=
               (\rcs -> do
-                    (rfs,siss) <- fmap unzip $
+                    (rfs,siss) <- fmap (force . unzip) $
                                   mapM
                                   (\rc@(gr,_) -> 
                           
                                    func outP gr >> 
-                                   return (force $ (mergeScore &&& toSiteLines) rc)
+                                   (return $! (force $! (mergeScore &&& toSiteLines) rc))
                                  ) $ rcs
                     writeFile targetFile $ showSpreadsheet $
                         mkTargetWorkbook hRef rfs
@@ -242,11 +242,13 @@ miRNAPredict spe miFasta@(Fasta sid _) allUTRFile =
                   runProcess program [miFile,utrFile] Nothing Nothing
                   (Just hIn) (Just hOut) (Just hErr)
             case ex of
-                ExitSuccess ->
+                ExitSuccess -> do
                     hClose hIn >> removeFile fpIn >>
-                    hClose hErr >> removeFile fpErr >>
-                    B8.hGetContents hOut >>=
-                    return . mRecordFilter . toMRecords 
+                        hClose hErr >> removeFile fpErr >>
+                        hClose hOut
+                    str <- B8.readFile fpOut
+                    removeFile fpOut
+                    return $ mRecordFilter $ toMRecords str
                 _ ->
                     hClose hIn >> removeFile fpIn >>
                     hClose hOut >> removeFile fpOut >>
@@ -309,7 +311,7 @@ toRecord str mRs utrSets =
           ss = toSites (mRNALen mR) (head lhs) (sites mR)
       in if null lhs
          then error $ (show mR ++ "\n\n" ++ show utrSet)
-         else Record miID utrID (head lhs) (rhs) ss
+         else force $ Record miID utrID (head lhs) (rhs) ss
 
 toSites :: Int -> UTR -> [MSite] -> [Site]
 toSites mRNALength utr =
@@ -324,7 +326,7 @@ toSites mRNALength utr =
           uR = _mRNARange mSite
           m = _match mSite
           al = _align mSite
-      in Site mS rawS cS csP sR uR m st al)
+      in force $ Site mS rawS cS csP sR uR m st al)
 
 
 readUTRs :: FilePath -> [B8.ByteString] -> IO [[UTR]]
@@ -362,7 +364,7 @@ preprocess = B8.intercalate "\n" . filter
 toUTRs :: ByteString -> [UTR]
 {-# INLINE toUTRs #-}
 toUTRs = map
-         (f . (L8.split '\t')) . tail . L8.lines . L8.filter (/= '\r')
+         (force . f . (L8.split '\t')) . tail . L8.lines . L8.filter (/= '\r')
   where f (refId:_:syb:tax:sdata:[]) = case L8.readInt tax of
                                        Just (taxId,_) -> UTR (L8.toStrict syb) (L8.toStrict refId) taxId (GS $ L8.toStrict sdata)
                                        _              -> error "Fail in parse UTR sequence."

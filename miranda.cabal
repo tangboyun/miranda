@@ -1,5 +1,5 @@
 name:                miranda
-version:             0.1.0.3
+version:             0.1.0.4
 -- synopsis:            
 -- description:         
 license:             GPL-3
@@ -56,12 +56,13 @@ library
                        colour,deepseq,vector,
                        unordered-containers,
                        containers,
-                       filepath,parallel,diagrams-lib,
-                       diagrams-cairo,process,directory,
+                       filepath,parallel,diagrams-lib >= 1.0.0.0,
+                       diagrams-cairo >= 1.0,process,directory,
                        time,split,bio-seq-embl,zlib,
                        HStringTemplate,diagrams-heatmap,
                        statistics,text,mwc-random,
-                       vector-binary-instances
+                       vector-binary-instances,lens >= 3.10.0.0,
+                       data-default-class
 
   hs-source-dirs:      src
   ghc-options:         -Wall

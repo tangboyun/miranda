@@ -24,25 +24,26 @@ module MiRanda.Diagram
        ) 
        where
 
+import           Control.Lens (set)
 import qualified Data.ByteString.Char8 as B8
 import           Data.Char (isAlpha)
 import           Data.Colour.Names
+import           Data.Default.Class
 import           Data.Function
 import           Data.List
 import           Diagrams.Backend.Cairo
 import           Diagrams.Backend.Cairo.Internal
 import           Diagrams.Prelude hiding (align)
 import           MiRanda.Diagram.Alignment
+import           MiRanda.Diagram.HeatMap
 import           MiRanda.Diagram.Icon
 import           MiRanda.Diagram.LocalAU
 import           MiRanda.Diagram.Pos
 import           MiRanda.Diagram.Structure
-import           MiRanda.Diagram.HeatMap
 import           MiRanda.Score
+import qualified MiRanda.Storage.Type as ST
 import           MiRanda.Types
 import           MiRanda.Util
-import           MiRanda.Util
-import qualified MiRanda.Storage.Type as ST
 
 
 hW = 0.6
@@ -94,7 +95,8 @@ recordDiagram re =
                in plotMultiAlign u us seedR siteR # centerXY) ss
         t = tableDiagram re
         vsep = 1
-        aPlot = (scale (wt / wa) $ vcat' (CatOpts Cat vsep Proxy) as) :: Diagram Cairo R2
+        catOptSetteing = set sep vsep $ set catMethod Cat def              
+        aPlot = (scale (wt / wa) $ vcat' catOptSetteing as) :: Diagram Cairo R2
         wt = width t
         wa = maximum $ map width (as :: [Diagram Cairo R2])
     in pad 1.01 (t === strutY 1 === aPlot)
@@ -163,9 +165,11 @@ tableDiagram re =
                    )) ds
         vsep = 0.2
         hsep = 0.2
+        vCatOptSetteing = set sep vsep $ set catMethod Cat def
+        hCatOptSetteing = set sep hsep $ set catMethod Cat def
     in centerXY $
-       vcat' (CatOpts Cat vsep Proxy) $
-       map (hcat' (CatOpts Cat hsep Proxy)) $ hs : dss
+       vcat' vCatOptSetteing $
+       map (hcat' hCatOptSetteing) $ hs : dss
 
 tableDiagram' :: ST.GeneInfo -> ST.MiRSites -> Diagram Cairo R2
 tableDiagram' gi mirSs =
@@ -234,9 +238,11 @@ tableDiagram' gi mirSs =
                    )) ds
         vsep = 0.2
         hsep = 0.2
+        vCatOptSetteing = set sep vsep $ set catMethod Cat def
+        hCatOptSetteing = set sep hsep $ set catMethod Cat def
     in centerXY $
-       vcat' (CatOpts Cat vsep Proxy) $
-       map (hcat' (CatOpts Cat hsep Proxy)) $ hs : dss
+       vcat' vCatOptSetteing $
+       map (hcat' hCatOptSetteing) $ hs : dss
 
 recordDiagram' :: ST.GeneRecord -> [Diagram Cairo R2]
 recordDiagram' gr =
@@ -254,9 +260,10 @@ recordDiagram' gr =
                      in plotMultiAlign u us seedR siteR # centerXY) ss
               t = tableDiagram' gi mrSite
               vsep = 1
+              catOptSetteing = set sep vsep $ set catMethod Cat def              
               aPlot = if null us
                       then mempty
-                      else (scale (wt / wa) $ vcat' (CatOpts Cat vsep Proxy) as) :: Diagram Cairo R2
+                      else (scale (wt / wa) $ vcat' catOptSetteing as) :: Diagram Cairo R2
               wt = width t
               wa = maximum $ map width (as :: [Diagram Cairo R2])
           in if null ss

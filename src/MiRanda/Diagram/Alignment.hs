@@ -17,26 +17,26 @@ module MiRanda.Diagram.Alignment
        )
        where
 
+import           Control.Lens (set)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as B8
 import           Data.Char
 import           Data.Colour
 import           Data.Colour.Names
 import           Data.Colour.SRGB (RGB(..),sRGB,toSRGB)
+import           Data.Default.Class
 import           Data.Function
 import qualified Data.IntMap.Strict as IM
 import           Data.List
 import           Data.List.Split
 import           Data.Maybe
-import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
 import           Diagrams.Prelude hiding (diff,end,trace)
+import           Diagrams.TwoD.Text
 import           MiRanda.Parameter
-import           MiRanda.Util
 import           MiRanda.Types
+import           MiRanda.Util
 import           Text.Printf
-import Diagrams.TwoD.Text
-import Data.Monoid (mappend)
 
 aColor = red
 gColor = green
@@ -295,7 +295,8 @@ plotMultiAlign !utr !utrs !seedRange !siteRange =
                   then error "Alignment.hs"
                   else head ls
       tailLs = map (centerX . hcat) $ tail dMatrix
-      charStas = hcat' (CatOpts Distrib monoW Proxy) $
+      catOptSetteing = set sep monoW $ set catMethod Cat def
+      charStas = hcat' catOptSetteing $
                  plotSeqStas True beforeSite ++
                  plotSeqStas False siteStr ++
                  plotSeqStas True afterSite

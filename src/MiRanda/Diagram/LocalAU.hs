@@ -17,11 +17,14 @@ module MiRanda.Diagram.LocalAU
        )
        where
 
-import Diagrams.Prelude hiding (sep)
-import           Data.Colour.Names
+import           Control.Lens (set)
 import qualified Data.ByteString.Char8 as B8
-import MiRanda.Types
-import Data.Char
+import           Data.Char
+import           Data.Colour.Names
+import           Data.Default.Class
+import           Diagrams.Prelude
+import           MiRanda.Types
+
 
 monoW = 0.70
 monoH = 1
@@ -52,7 +55,7 @@ re (h,bool) = if bool
                    # fc black
                    # alignB
     
-sep = monoW * 0.2
+sepW = monoW * 0.2
 
 -- input Seed site 
 plotLocalAU utr st (P up' dn') =
@@ -92,21 +95,22 @@ plotLocalAU utr st (P up' dn') =
                         then 'U'
                         else c) . toUpper) $
               B8.drop dn utr
-      localU = hcat' (CatOpts Cat sep Proxy) $
+      catOptSetteing = set sep sepW $ set catMethod Cat def      
+      localU = hcat' catOptSetteing $
                reverse $ map re $
                zip (map (* rectH) us) $
                map (\c ->
                      if c == 'A' || c == 'U'
                      then True
                      else False) up30
-      localD = hcat' (CatOpts Cat sep Proxy) $
+      localD = hcat' catOptSetteing $
                map re $ zip (map (* rectH) ds) $
                map (\c ->
                      if c == 'A' || c == 'U'
                      then True
                      else False) dn30
-      lhs = localU ||| strutX sep
-      rhs = strutX sep ||| localD
+      lhs = localU ||| strutX sepW
+      rhs = strutX sepW ||| localD
       middle = stringM seedColor monoFont str # centerX # alignB
       step1 = beside unit_X middle lhs
       step2 = beside unitX step1 rhs

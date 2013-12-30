@@ -70,6 +70,8 @@ runMiRanda miFasta utrFasta = do
 filterEMBL :: ByteString -> [EMBL] -> [EMBL]
 filterEMBL spe = filter ((== spe) . taxonomy . identification)
 
+
+
 dumpDB :: String -> FilePath -> FilePath -> FilePath -> FilePath -> IO ()
 dumpDB spe utrFile miRBase miRFam outDB = do
     let spe3 = case map toLower spe of

@@ -393,3 +393,18 @@ instance NFData SiteLine where
                                      rnf g `seq` rnf h `seq`                                       
                                      rnf i `seq` rnf j `seq`
                                      rnf k `seq` ()
+instance NFData Match where
+    rnf (Match a b) = rnf a `seq` rnf b `seq` ()
+
+instance NFData Site where
+    rnf (Site a b c d e f g h i) = rnf a `seq` rnf b `seq`
+                                   rnf c `seq` rnf d `seq`
+                                   rnf e `seq` rnf f `seq`
+                                   rnf g `seq` rnf h `seq`                                       
+                                   rnf i `seq` ()
+
+instance NFData Record where
+    rnf (Record a b c d e) = rnf a `seq` rnf b `seq`
+                             rnf c `seq` rnf d `seq`
+                             rnf e `seq` ()
+                             
