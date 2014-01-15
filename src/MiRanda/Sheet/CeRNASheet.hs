@@ -28,7 +28,7 @@ import           Text.XML.SpreadsheetML.Types
 import           Text.XML.SpreadsheetML.Util
 import Data.Maybe
 -- import Control.Arrow
-import MiRanda.Types (Gene(..))
+import MiRanda.Types (Gene(..),UTR(..))
 import Data.List
 import Data.Function
 import MiRanda.Sheet.Template
@@ -60,7 +60,7 @@ mkCeRNAWorkbook gr ds =
                       (map
                        (\((Gene s r, expr),(mu,vi)) ->
                          mkRow $
-                         [ smartHRef r
+                         [ smartHRef . B8.unpack $ r
                          , string . B8.unpack $ s
                          , string . show $ expr
                          , number mu
@@ -68,11 +68,8 @@ mkCeRNAWorkbook gr ds =
                          , number . fromIntegral . UV.sum $ vi
                          ] ++ map (number . fromIntegral) (UV.toList vi)
                          ) $
-                       sortBy (flip compare `on` (fst . snd)) ds
-                       -- map
-                       -- (((gene . geneInfo) &&& (expressionStyle . geneInfo)) &&&
-                       --  ((fst &&& (fst . snd)) . toLine gr))
-                       -- grs
+--                       sortBy (flip compare `on` (fst . snd))
+                       ds
                       )
                      )
     in addS $
@@ -82,21 +79,31 @@ mkCeRNAWorkbook gr ds =
   where
     fstLine =
         mkRow $
-        [ smartHRef . ref . gene . geneInfo $ gr
+        [ smartHRef . B8.unpack . ref . gene . geneInfo $ gr
         , string . B8.unpack . syb . gene . geneInfo $ gr
         , string . show . expressionStyle . geneInfo $ gr
         , emptyCell
         , number . fromIntegral . length . mirSites $ gr
         , number . fromIntegral . sum . map (length . sites) . mirSites $ gr
         ] ++
-        map (number . fromIntegral . length . sites) (mirSites gr) 
-    smartHRef str = if "NM_" `B8.isPrefixOf` str ||
-                        "NR_" `B8.isPrefixOf` str
+        map (number . fromIntegral . length . sites) (mirSites gr)
+    taxID = taxonomyID $ thisSpecies $ geneInfo $ gr
+    smartHRef str = if "NM_" `isPrefixOf` str ||
+                       "NR_" `isPrefixOf` str
                     then toNCBILink str
-                    else string . B8.unpack $ str
-    toNCBILink l = let s = B8.unpack l
-                   in href ("http://www.ncbi.nlm.nih.gov/nuccore/" ++ s ++ "?report=genbank") s
+                    else if taxID /= 9606
+                         then string str
+                         else if "ENST" `isPrefixOf` str
+                              then toENSTLink str
+                              else if "uc" `isPrefixOf` str
+                                   then toUCSCLink str
+                                   else string str
+    toENSTLink l = href ("http://www.ensembl.org/Homo_sapiens/Transcript/Summary?db=core;t=" ++ l) l
                       # withStyleID "ref"
+    toUCSCLink l = href ("http://genome.ucsc.edu/cgi-bin/hgGene?db=hg19&hgg_gene=" ++ l) l
+                      # withStyleID "ref"
+    toNCBILink s = href ("http://www.ncbi.nlm.nih.gov/nuccore/" ++ s ++ "?report=genbank") s
+                   # withStyleID "ref"
     addS wb = wb
               # addStyle (Name "ceRNA") ceRNACell
               # addStyle (Name "mutame") mutameCell
