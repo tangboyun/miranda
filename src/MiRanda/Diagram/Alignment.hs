@@ -295,8 +295,8 @@ plotMultiAlign !utr !utrs !seedRange !siteRange =
                   then error "Alignment.hs"
                   else head ls
       tailLs = map (centerX . hcat) $ tail dMatrix
-      catOptSetteing = set sep monoW $ set catMethod Cat def
-      charStas = hcat' catOptSetteing $
+      catOptSetting = set sep monoW $ set catMethod Distrib def
+      charStas = hcat' catOptSetting $
                  plotSeqStas True beforeSite ++
                  plotSeqStas False siteStr ++
                  plotSeqStas True afterSite
