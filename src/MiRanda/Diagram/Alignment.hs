@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings,BangPatterns,FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings,BangPatterns,FlexibleContexts,CPP #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : 
@@ -125,27 +125,32 @@ plotSeqStas isBW ts = map (plot . sortBy (flip compare `on` per) . tpToList) ts
                    in sRGB c c c
                    ) . toSRGB
     scaleFactor p = 4 * p / logBase 2 5
+#ifndef WIN32
+    cutOff = 0.02
+#else
+    cutOff = 0.05
+#endif    
     plot = centerXY . (<> strutY (4 * h) # alignB) . alignB . vcat .
            map (\s ->
                  case s of
                    A p ->
-                     if p < 0.02
+                     if p < cutOff
                      then strutX w'
                      else aChar (toBW aColor) # scaleY (scaleFactor p)
                    T p ->
-                     if p < 0.02
+                     if p < cutOff
                      then strutX w'
                      else tChar (toBW tColor) # scaleY (scaleFactor p)
                    U p ->
-                     if p < 0.02
+                     if p < cutOff
                      then strutX w'
                      else uChar (toBW uColor) # scaleY (scaleFactor p)
                    C p ->
-                     if p < 0.02
+                     if p < cutOff
                      then strutX w'
                      else cChar (toBW cColor) # scaleY (scaleFactor p)
                    G p ->
-                     if p < 0.02
+                     if p < cutOff
                      then strutX w'
                      else gChar (toBW gColor) # scaleY (scaleFactor p)
                )
