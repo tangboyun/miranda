@@ -114,9 +114,7 @@ plotSeqStas isBW ts = map (plot . sortBy (flip compare `on` per) . tpToList) ts
         let entropy f = if f == 0
                         then 0
                         else negate $ f * logBase 2 f
---            f_ = 1 - (a+c+g+t+u)
             r = totalH - sum (map entropy [a,c,g,t+u])
---            r = logBase 2 5 - sum (map entropy [a,c,g,t+u])
         in [A $ a * r, C $ c * r, G $ g * r, T $ t*r, U $ u * r]
     totalH = 2
     toBW = if isBW
@@ -126,31 +124,41 @@ plotSeqStas isBW ts = map (plot . sortBy (flip compare `on` per) . tpToList) ts
                    let c = 0.21 * r + 0.71 * g + 0.07 * b
                    in sRGB c c c
                    ) . toSRGB
-    scaleFactor p = 4 * p / totalH -- logBase 2 5
+    scaleFactor p = p / 0.5
     cutOff = 0.02
     plot = centerXY . (<> strutY (4 * h) # alignB) . alignB . vcat .
            map (\s ->
                  case s of
                    A p ->
-                     if p < cutOff
+                     if p == 0
                      then strutX w'
-                     else mempty -- aChar (toBW aColor) # scaleY (scaleFactor p)
+                     else if scaleFactor p < cutOff
+                     then strutY (scaleFactor p) <> strutX w'
+                     else aChar (toBW aColor) # scaleY (scaleFactor p)
                    T p ->
-                     if p < cutOff
+                     if p == 0
                      then strutX w'
-                     else mempty -- tChar (toBW tColor) # scaleY (scaleFactor p)
+                     else if scaleFactor p < cutOff
+		          then strutY (scaleFactor p) <> strutX w'
+                          else tChar (toBW tColor) # scaleY (scaleFactor p)
                    U p ->
-                     if p < cutOff
+                     if p == 0
                      then strutX w'
-                     else mempty -- uChar (toBW uColor) # scaleY (scaleFactor p)
+                     else if scaleFactor p < cutOff
+                          then strutY (scaleFactor p) <> strutX w'
+                          else uChar (toBW uColor) # scaleY (scaleFactor p)
                    C p ->
-                     if p < cutOff
+                     if p == 0
                      then strutX w'
-                     else mempty -- cChar (toBW cColor) # scaleY (scaleFactor p)
+                     else if scaleFactor p < cutOff
+                          then strutY (scaleFactor p) <> strutX w'
+                          else cChar (toBW cColor) # scaleY (scaleFactor p)
                    G p ->
-                     if p < cutOff
+                     if p == 0
                      then strutX w'
-                     else mempty -- gChar (toBW gColor) # scaleY (scaleFactor p)
+                     else if scaleFactor p < cutOff
+                          then strutY (scaleFactor p) <> strutX w'
+                          else mempty -- gChar (toBW gColor) # scaleY (scaleFactor p)
                )
 
 {-# INLINE diff #-}
