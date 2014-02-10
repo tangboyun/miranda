@@ -138,37 +138,37 @@ recordFilter rs =
 mkdir :: FilePath -> IO ()
 mkdir = createDirectoryIfMissing True
 
-toDiagramsLnc :: FilePath -> [Record] -> IO ()
-toDiagramsLnc outP rs =
-    mapM_ (\(outF,d) -> renderPDF outF d) $
-    withStrategy (parBuffer numCapabilities rseq) $
-    map 
-    (\r ->
-      let mid = miRNA r
-          sy = geneSymbol $ utr r
-          re = refSeqID $ utr r
-          base = B8.unpack
-                 (mid <> " vs " <>
-                  re <> "(" <> sy <> ")") <.> "pdf"
-          outF = outP </> base
-          d = tableDiagram r
-      in (outF,d)) rs
+-- toDiagramsLnc :: FilePath -> [Record] -> IO ()
+-- toDiagramsLnc outP rs =
+--     mapM_ (\(outF,d) -> renderPDF outF d) $
+--     withStrategy (parBuffer numCapabilities rseq) $
+--     map 
+--     (\r ->
+--       let mid = miRNA r
+--           sy = geneSymbol $ utr r
+--           re = refSeqID $ utr r
+--           base = B8.unpack
+--                  (mid <> " vs " <>
+--                   re <> "(" <> sy <> ")") <.> "pdf"
+--           outF = outP </> base
+--           d = tableDiagram r
+--       in (outF,d)) rs
 
-toDiagrams :: FilePath -> [Record] -> IO ()
-toDiagrams outP rs =
-    mapM_ (\(outF,d) -> renderPDF outF d) $
-    withStrategy (parBuffer numCapabilities rseq) $
-    map 
-    (\r ->
-      let mid = miRNA r
-          sy = geneSymbol $ utr r
-          re = refSeqID $ utr r
-          base = B8.unpack
-                 (mid <> " vs " <>
-                  re <> "(" <> sy <> ")") <.> "pdf"
-          outF = outP </> base
-          d = recordDiagram r
-      in (outF,d)) rs
+-- toDiagrams :: FilePath -> [Record] -> IO ()
+-- toDiagrams outP rs =
+--     mapM_ (\(outF,d) -> renderPDF outF d) $
+--     withStrategy (parBuffer numCapabilities rseq) $
+--     map 
+--     (\r ->
+--       let mid = miRNA r
+--           sy = geneSymbol $ utr r
+--           re = refSeqID $ utr r
+--           base = B8.unpack
+--                  (mid <> " vs " <>
+--                   re <> "(" <> sy <> ")") <.> "pdf"
+--           outF = outP </> base
+--           d = recordDiagram r
+--       in (outF,d)) rs
     
 
 -- TargetScan网站上的坐标是1based, NOT 0 based

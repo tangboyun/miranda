@@ -1,4 +1,4 @@
-{-# LANGUAGE NoMonomorphismRestriction,BangPatterns #-}
+{-# LANGUAGE NoMonomorphismRestriction,BangPatterns,FlexibleContexts #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : 
@@ -14,9 +14,7 @@
 
 module MiRanda.Diagram
        (
-         renderPDF
-       , renderPNG
-       , recordDiagram
+         recordDiagram
        , tableDiagram
        , recordDiagram'
        , tableDiagram'
@@ -31,9 +29,8 @@ import           Data.Colour.Names
 import           Data.Default.Class
 import           Data.Function
 import           Data.List
-import           Diagrams.Backend.Cairo
-import           Diagrams.Backend.Cairo.Internal
 import           Diagrams.Prelude hiding (align)
+import           Diagrams.TwoD.Types
 import           MiRanda.Diagram.Alignment
 import           MiRanda.Diagram.HeatMap
 import           MiRanda.Diagram.Icon
@@ -44,14 +41,15 @@ import           MiRanda.Score
 import qualified MiRanda.Storage.Type as ST
 import           MiRanda.Types
 import           MiRanda.Util
-
+import           Diagrams.TwoD
+import           Diagrams.TwoD.Text
 
 hW = 0.6
 hH = 1
 
 bgColor = aliceblue
 
-tableHeader :: [Diagram Cairo R2]
+tableHeader :: (Renderable Text b,Renderable (Path R2) b, Backend b R2) => [Diagram b R2]
 tableHeader =
     map
     (\str ->
@@ -71,19 +69,18 @@ tableHeader =
     ]
     
 -- 8.27 inch , cairo default dpi = 72
-widthA4 = Width 600
-heightA4 = Height 840
+-- widthA4 = Width 600
+-- heightA4 = Height 840
     
-renderPDF :: FilePath -> Diagram Cairo R2 -> IO ()
-renderPDF outFile d =
-    fst $ renderDia Cairo (CairoOptions outFile widthA4 PDF False) d
+-- renderPDF :: FilePath -> Diagram Cairo R2 -> IO ()
+-- renderPDF outFile d =
+--     fst $ renderDia Cairo (CairoOptions outFile widthA4 PDF False) d
 
-renderPNG :: FilePath -> Diagram Cairo R2 -> IO ()
-renderPNG outFile d =
-    fst $ renderDia Cairo (CairoOptions outFile widthA4 PNG False) d
+-- renderPNG :: FilePath -> Diagram Cairo R2 -> IO ()
+-- renderPNG outFile d =
+--     fst $ renderDia Cairo (CairoOptions outFile widthA4 PNG False) d
 
-
-recordDiagram :: Record -> Diagram Cairo R2
+recordDiagram :: (Renderable Text b,Renderable (Path R2) b, Backend b R2) => Record -> Diagram b R2
 recordDiagram re =
     let ss = sortBy (compare `on` utrRange) $ predictedSites re
         u = utr re
@@ -96,12 +93,12 @@ recordDiagram re =
         t = tableDiagram re
         vsep = 1
         catOptSetteing = set sep vsep $ set catMethod Cat def              
-        aPlot = (scale (wt / wa) $ vcat' catOptSetteing as) :: Diagram Cairo R2
-        wt = width t
-        wa = maximum $ map width (as :: [Diagram Cairo R2])
-    in pad 1.01 (t === strutY 1 === aPlot)
+        aPlot d1 ds = scale (getScaleFactor d1 ds) $ vcat' catOptSetteing ds
+        getScaleFactor :: (Renderable Text b,Renderable (Path R2) b,Backend b R2) => Diagram b R2 -> [Diagram b R2] -> Double
+        getScaleFactor d1 ds = width d1 / (maximum $ map width ds)
+    in pad 1.01 (t === strutY 1 === aPlot t as)
 
-tableDiagram :: Record -> Diagram Cairo R2
+tableDiagram :: (Renderable Text b,Renderable (Path R2) b, Backend b R2) => Record -> Diagram b R2
 tableDiagram re =
     let (ss,cons) = unzip $ sortBy (compare `on` (utrRange.fst)) $
                     zip (predictedSites re) (myHead $ getConservations [re])
@@ -141,37 +138,42 @@ tableDiagram re =
                              else onlyM
                          Nothing -> onlyM
                ) ss
-        (header:ds) = transpose $ map
-                      (\col ->
-                        let w = maximum $ map (width . fst) col
-                        in map (\(d,h) -> (d,(w,h))) col 
-                      ) $ transpose $ (zip tableHeader $ map height tableHeader) :
-                      (map
-                       (\row ->
-                         let h = maximum $ map height row
-                         in zip row $ repeat h
-                       ) $ transpose [col1,col2,col3,col4,col5])
-        hs = map (\(d,(w,h)) ->
-                   d <>
-                   rect w h
-                   # lcA transparent
-                   # fc darkblue) header
-        dss = map (map
-                   (\(d,(w,h)) ->
-                     d <>
-                     rect w h
-                     # lcA transparent
-                     # fc bgColor
-                   )) ds
+        traned :: (Renderable Text b,Renderable (Path R2) b, Backend b R2) => [Diagram b R2] -> [[(Diagram b R2,(Double,Double))]]
+        traned xs = transpose $ map
+                 (\col ->
+                   let w = maximum $ map (width . fst) col
+                   in map (\(d,h) -> (d,(w,h))) col 
+                 ) $ transpose $ (zip xs $ map height xs) :
+                 (map
+                  (\row ->
+                    let h = maximum $ map height row
+                    in zip row $ repeat h
+                  ) $ transpose [col1,col2,col3,col4,col5])
+        result :: (Renderable Text b,Renderable (Path R2) b, Backend b R2) => [[(Diagram b R2,(Double,Double))]] -> [[Diagram b R2]]
+        result xss = if null xss
+                 then []
+                 else (map (\(d,(w,h)) ->
+                            d <>
+                            rect w h
+                            # lcA transparent
+                            # fc darkblue) $ head xss) :
+                      (map (map
+                            (\(d,(w,h)) ->
+                              d <>
+                              rect w h
+                              # lcA transparent
+                              # fc bgColor
+                            )) $ tail xss)
         vsep = 0.2
         hsep = 0.2
         vCatOptSetteing = set sep vsep $ set catMethod Cat def
         hCatOptSetteing = set sep hsep $ set catMethod Cat def
     in centerXY $
        vcat' vCatOptSetteing $
-       map (hcat' hCatOptSetteing) $ hs : dss
+       map (hcat' hCatOptSetteing) $
+       result (traned tableHeader)
 
-tableDiagram' :: ST.GeneInfo -> ST.MiRSites -> Diagram Cairo R2
+tableDiagram' :: (Renderable Text b,Renderable (Path R2) b, Backend b R2) => ST.GeneInfo -> ST.MiRSites -> Diagram b R2
 tableDiagram' gi mirSs =
     let ss = sortBy (compare `on` ST.siteRange) $
              ST.sites mirSs
@@ -208,43 +210,43 @@ tableDiagram' gi mirSs =
                              else onlyM
                          Nothing -> onlyM
                ) ss
-        traned = transpose $ map
+        traned :: (Renderable Text b,Renderable (Path R2) b, Backend b R2) => [Diagram b R2] -> [[(Diagram b R2,(Double,Double))]]
+        traned xs = transpose $ map
                  (\col ->
                    let w = maximum $ map (width . fst) col
                    in map (\(d,h) -> (d,(w,h))) col 
-                 ) $ transpose $ (zip tableHeader $ map height tableHeader) :
+                 ) $ transpose $ (zip xs $ map height xs) :
                  (map
                   (\row ->
                     let h = maximum $ map height row
                     in zip row $ repeat h
                   ) $ transpose [col1,col2,col3,col4,col5])
-        header = if null traned
+        result :: (Renderable Text b,Renderable (Path R2) b, Backend b R2) => [[(Diagram b R2,(Double,Double))]] -> [[Diagram b R2]]
+        result xss = if null xss
                  then []
-                 else head traned
-        ds = if null traned
-             then []
-             else tail traned
-        hs = map (\(d,(w,h)) ->
-                   d <>
-                   rect w h
-                   # lcA transparent
-                   # fc darkblue) header
-        dss = map (map
-                   (\(d,(w,h)) ->
-                     d <>
-                     rect w h
-                     # lcA transparent
-                     # fc bgColor
-                   )) ds
+                 else (map (\(d,(w,h)) ->
+                            d <>
+                            rect w h
+                            # lcA transparent
+                            # fc darkblue) $ head xss) :
+                      (map (map
+                            (\(d,(w,h)) ->
+                              d <>
+                              rect w h
+                              # lcA transparent
+                              # fc bgColor
+                            )) $ tail xss)
         vsep = 0.2
         hsep = 0.2
         vCatOptSetteing = set sep vsep $ set catMethod Cat def
         hCatOptSetteing = set sep hsep $ set catMethod Cat def
     in centerXY $
        vcat' vCatOptSetteing $
-       map (hcat' hCatOptSetteing) $ hs : dss
-
-recordDiagram' :: ST.GeneRecord -> [Diagram Cairo R2]
+       map (hcat' hCatOptSetteing) $ 
+       result (traned tableHeader)
+       
+       
+recordDiagram' :: (Renderable Text b,Renderable (Path R2) b, Backend b R2) =>  ST.GeneRecord -> [Diagram b R2]
 recordDiagram' gr =
     let gi = ST.geneInfo gr
         u = ST.thisSpecies gi
@@ -261,12 +263,12 @@ recordDiagram' gr =
               t = tableDiagram' gi mrSite
               vsep = 1
               catOptSetteing = set sep vsep $ set catMethod Cat def              
-              aPlot = if null us
-                      then mempty
-                      else (scale (wt / wa) $ vcat' catOptSetteing as) :: Diagram Cairo R2
-              wt = width t
-              wa = maximum $ map width (as :: [Diagram Cairo R2])
+              aPlot d1 ds = if null us
+                            then mempty
+                            else scale (getScaleFactor d1 ds) $ vcat' catOptSetteing ds
+              getScaleFactor :: (Renderable Text b,Renderable (Path R2) b,Backend b R2) => Diagram b R2 -> [Diagram b R2] -> Double
+              getScaleFactor d1 ds = width d1 / (maximum $ map width ds)
           in if null ss
              then mempty
-             else pad 1.01 (t === strutY 1 === aPlot)) $
+             else pad 1.01 (t === strutY 1 === aPlot t as)) $
        ST.mirSites gr

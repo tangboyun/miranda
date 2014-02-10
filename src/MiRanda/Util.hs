@@ -24,7 +24,6 @@ import Data.ByteString (ByteString)
 import Data.List
 import Control.Arrow
 import Data.Function
-import Data.Maybe
 import Data.Monoid
 
 

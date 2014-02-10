@@ -61,7 +61,7 @@ library
                        time,split,bio-seq-embl,zlib,
                        HStringTemplate,diagrams-heatmap,
                        statistics,text,mwc-random,
-                       vector-binary-instances,lens >= 3.10.0.0,
+                       vector-binary-instances,lens == 3.10.*,
                        data-default-class
 
   hs-source-dirs:      src
