@@ -114,9 +114,8 @@ plotSeqStas isBW ts = map (plot . sortBy (flip compare `on` per) . tpToList) ts
         let entropy f = if f == 0
                         then 0
                         else negate $ f * logBase 2 f
-            r = totalH - sum (map entropy [a,c,g,t+u])
+            r = 2 - sum (map entropy [a,c,g,t+u])
         in [A $ a * r, C $ c * r, G $ g * r, T $ t*r, U $ u * r]
-    totalH = 2
     toBW = if isBW
            then luminosity
            else id
@@ -139,7 +138,7 @@ plotSeqStas isBW ts = map (plot . sortBy (flip compare `on` per) . tpToList) ts
                      if p == 0
                      then strutX w'
                      else if scaleFactor p < cutOff
-		          then strutY (scaleFactor p) <> strutX w'
+                          then strutY (scaleFactor p) <> strutX w'
                           else tChar (toBW tColor) # scaleY (scaleFactor p)
                    U p ->
                      if p == 0
@@ -158,7 +157,7 @@ plotSeqStas isBW ts = map (plot . sortBy (flip compare `on` per) . tpToList) ts
                      then strutX w'
                      else if scaleFactor p < cutOff
                           then strutY (scaleFactor p) <> strutX w'
-                          else mempty -- gChar (toBW gColor) # scaleY (scaleFactor p)
+                          else gChar (toBW gColor) # scaleY (scaleFactor p)
                )
 
 {-# INLINE diff #-}
