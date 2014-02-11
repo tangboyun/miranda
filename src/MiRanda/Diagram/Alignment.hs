@@ -123,7 +123,7 @@ plotSeqStas isBW ts = map (plot . sortBy (flip compare `on` per) . tpToList) ts
                    let c = 0.21 * r + 0.71 * g + 0.07 * b
                    in sRGB c c c
                    ) . toSRGB
-    scaleFactor p = p / 0.5
+    scaleFactor p = p / h
     cutOff = 0.02
     plot = centerXY . (<> strutY (4 * h) # alignB) . alignB . vcat .
            map (\s ->
