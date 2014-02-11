@@ -56,12 +56,14 @@ library
                        colour,deepseq,vector,
                        unordered-containers,
                        containers,
-                       filepath,parallel,diagrams-lib,
+                       filepath,parallel,diagrams >= 1.0,
+                       diagrams-lib,
                        process,directory,
                        time,split,bio-seq-embl,zlib,
                        HStringTemplate,diagrams-heatmap,
-                       statistics,text,mwc-random,
-                       vector-binary-instances,lens == 3.10.*,
+                       statistics,text >= 0.11,
+                       mwc-random,
+                       vector-binary-instances,lens >= 3.8 && < 4,
                        data-default-class
 
   hs-source-dirs:      src
