@@ -70,8 +70,6 @@ runMiRanda miFasta utrFasta = do
 filterEMBL :: ByteString -> [EMBL] -> [EMBL]
 filterEMBL spe = filter ((== spe) . taxonomy . identification)
 
-
-
 dumpDB :: String -> FilePath -> FilePath -> FilePath -> FilePath -> IO ()
 dumpDB spe utrFile miRBase miRFam outDB = do
     let spe3 = case map toLower spe of
@@ -101,6 +99,11 @@ dumpDB spe utrFile miRBase miRFam outDB = do
 
     mRs <- runMiRanda miFasta utrFasta
 
+    typeHash <- L.readFile utrFile >>=
+             return . force . H.fromList .
+             map (((!! 0) &&& (!! 1)) . B8.split '\t' . L8.toStrict) .
+             L8.lines .
+             GZ.decompress
 
     utrss <- L.readFile utrFile >>=
              return .
@@ -118,10 +121,10 @@ dumpDB spe utrFile miRBase miRFam outDB = do
           let (lhs,rhs) = partition ((== orgToTaxID spe) . taxonomyID) utrs
               u = head lhs
               binIdx = snd $ getBranchLength (u,rhs)
-              exp = if "NM_" `B8.isPrefixOf` (refSeqID u)
+              expr = if typeHash H.! (refSeqID u) == "Coding"
                     then Coding
                     else NonCoding
-              gInfo = GI (Gene (geneSymbol u) (refSeqID u)) exp u rhs
+              gInfo = GI (Gene (geneSymbol u) (refSeqID u)) expr u rhs
               gr = GR gInfo $
                    map
                    (\mr ->
@@ -133,7 +136,6 @@ dumpDB spe utrFile miRBase miRFam outDB = do
           in gr
         ) $ toPairs utrss $
         groupBy ((==) `on` _mRNA) mRs
-
 
 
 dumpDBWithHashPair :: String -> FilePath -> FilePath -> FilePath -> (HashSet ByteString,HashSet ByteString) -> FilePath -> IO ()
