@@ -98,12 +98,17 @@ dumpDB spe utrFile miRBase miRFam outDB = do
         filter ((== orgToTaxID spe) . taxonomyID) . toUTRs . GZ.decompress
 
     mRs <- runMiRanda miFasta utrFasta
-
-    typeHash <- L.readFile utrFile >>=
-             return . force . H.fromList .
-             map (((!! 0) &&& (!! 1)) . B8.split '\t' . L8.toStrict) .
-             L8.lines .
-             GZ.decompress
+    L.readFile utrFile >>=
+        L8.writeFile (replaceExtension utrFile "tmp") .
+        L8.unlines .
+        map (L8.intercalate "\t" . Data.List.take 2 . L8.split '\t') .
+        L8.lines .
+        GZ.decompress
+    
+    typeHash <- B8.readFile (replaceExtension utrFile "tmp") >>=
+                return . H.fromList . 
+                map ((( !! 0) &&& (!! 1)) . B8.split '\t') .
+                B8.lines 
 
     utrss <- L.readFile utrFile >>=
              return .
