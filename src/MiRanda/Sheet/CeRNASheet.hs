@@ -68,7 +68,7 @@ mkCeRNAWorkbook gr ds =
                          , number . fromIntegral . UV.sum $ vi
                          ] ++ map (number . fromIntegral) (UV.toList vi)
                          ) $
---                       sortBy (flip compare `on` (fst . snd))
+                       sortBy (flip compare `on` (fst . snd))
                        ds
                       )
                      )
