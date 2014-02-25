@@ -100,6 +100,7 @@ splitList n ls =
 recordFilter :: [Record] -> [Record]
 {-# INLINE recordFilter #-}
 recordFilter rs =
+    filter ( not . null . predictedSites) $
     map fst $
     filter ( not . null . snd) $
     map
