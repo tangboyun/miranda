@@ -183,7 +183,7 @@ toRow dDir rl =
         base = B8.unpack
                (mid <> " vs " <>
                 r <> "(" <> s <> ")") <.> "pdf"
-        path = myMakeValid $ dDir </> base
+        path = myMakeValid $ dDir ++ "\\" ++ base
         showStr = "Click Me"
         ns = fromIntegral $ totalSite rl
         csp = case rcontextScorePlus rl of

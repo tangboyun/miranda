@@ -161,7 +161,7 @@ toRow !dDir !sl =
       base = B8.unpack
              (mid <> " vs " <>
               r <> "(" <> s <> ")") <.> "pdf"
-      path = myMakeValid $ dDir </> base
+      path = myMakeValid $ dDir ++ "\\" ++ base
       showStr = "Click Me"
       csp = context_Score_Plus sl 
       c = context_Score sl
