@@ -1,4 +1,5 @@
 {-# LANGUAGE NoMonomorphismRestriction #-}
+{-# LANGUAGE FlexibleContexts #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module : 
@@ -12,19 +13,15 @@
 --
 -----------------------------------------------------------------------------
 
-module MiRanda.Diagram.Pos
-       (
-           plotPos
-       )
-       where
+module MiRanda.Diagram.Pos where
 
 
 import Diagrams.Prelude
-import Data.Colour.Names
 import MiRanda.Types
 
 
 -- | seed match site
+plotPos :: (Renderable (Path R2) b, Backend b R2 ) => Int -> Pair ->  Diagram b R2
 plotPos utrLen (P b e) | utrLen >= 68,b >= 30, e <= utrLen - 30 =
     let lhs = alignTR $
               rect 30 h # lcA transparent # fc crimson |||
@@ -100,8 +97,8 @@ plotPos utrLen (P b e) | utrLen >= 68,b >= 30, e <= utrLen - 30 =
     in (tri <> lhs <> rhs) # centerXY
     where 
       h = (fromIntegral utrLen) / 40
-      m = utrLen - 60
-      p = fromIntegral (b + e) / 2
+--      m = utrLen - 60
+      p =  fromIntegral (b + e) / (2 :: Double) 
       w = h
       h' = 3.5 * w   
       tri = alignB $

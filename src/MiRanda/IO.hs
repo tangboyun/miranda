@@ -221,7 +221,7 @@ mkProcess miRFile utrFile = do
       let cmdSpec = RawCommand program [miRFile,utrFile]
       in return $
          CreateProcess cmdSpec Nothing Nothing
-         Inherit (CreatePipe) Inherit False False
+         Inherit (CreatePipe) Inherit False False False
 
 miRNAPredict :: String -> Fasta -> FilePath -> IO [MRecord]
 miRNAPredict spe miFasta@(Fasta sid _) allUTRFile =

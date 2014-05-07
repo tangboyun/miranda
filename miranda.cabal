@@ -6,7 +6,7 @@ author:              Boyun Tang
 maintainer:          tangboyun@hotmail.com
 category:            Bioinformatics
 build-type:          Simple
-cabal-version:       >=1.8
+cabal-version:       >=1.18
 Data-Files:          doc/CeRNA.org
                      patch/miRanda-3.3a-tby.patch
 library
@@ -55,12 +55,12 @@ library
                        containers,
                        filepath,parallel,diagrams >= 1.0,
                        diagrams-lib,
-                       process,directory,
+                       process >= 1.2.0.0,directory,
                        time,split,bio-seq-embl,zlib,
                        HStringTemplate,diagrams-heatmap,
                        statistics,text >= 0.11,
                        mwc-random,
-                       vector-binary-instances,lens >= 3.8 && < 4,
+                       vector-binary-instances,lens,
                        data-default-class
 
   hs-source-dirs:      src
